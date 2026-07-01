@@ -1,0 +1,1451 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carnet — Plateforme scolaire</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1B2A4A; --ink-light:#2E4271; --paper:#FAFAF7; --paper-alt:#F1EEE4; --card:#FFFFFF;
+  --gold:#C9952C; --gold-dark:#A87820; --green:#2F6B4F; --green-bg:#E8F1EC;
+  --red:#B23A33; --red-bg:#F6E9E7; --amber-bg:#FBF1DE; --blue-bg:#E9EEF6;
+  --gray:#6B6B63; --gray-light:#D8D5C9; --line:#E3E0D4;
+  --font-display:'Fraunces', serif; --font-body:'Inter', sans-serif; --font-mono:'IBM Plex Mono', monospace;
+}
+*{box-sizing:border-box;}
+body{margin:0;font-family:var(--font-body);background:var(--paper);color:var(--ink);}
+h1,h2,h3{font-family:var(--font-display);font-weight:600;margin:0;color:var(--ink);}
+button{font-family:var(--font-body);cursor:pointer;}
+input,select,textarea{font-family:var(--font-body);}
+a{color:inherit;}
+::selection{background:var(--gold);color:#fff;}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px;}
+
+#login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(circle at 15% 20%, rgba(201,149,44,0.10), transparent 40%),
+  radial-gradient(circle at 85% 80%, rgba(27,42,74,0.08), transparent 40%), var(--paper); padding:24px;}
+.login-box{width:100%;max-width:440px;}
+.login-mark{display:flex;align-items:center;gap:10px;margin-bottom:36px;}
+.login-mark .notch{width:34px;height:34px;border-radius:8px;background:var(--ink);position:relative;flex:none;}
+.login-mark .notch::after{content:'';position:absolute;left:8px;right:8px;top:10px;height:2px;background:var(--gold);box-shadow:0 6px 0 var(--gold), 0 12px 0 var(--gray-light);}
+.login-mark span{font-family:var(--font-display);font-size:22px;font-weight:700;letter-spacing:-0.01em;}
+.login-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:32px 28px;box-shadow:0 1px 2px rgba(27,42,74,0.04), 0 12px 32px rgba(27,42,74,0.06);}
+.login-card h1{font-size:24px;margin-bottom:6px;}
+.login-card .sub{color:var(--gray);font-size:14px;margin-bottom:26px;}
+.role-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:20px;}
+.role-pill{border:1.5px solid var(--line);background:var(--paper);border-radius:10px;padding:11px 4px;text-align:center;font-size:11.5px;font-weight:600;color:var(--gray);transition:.15s;}
+.role-pill.active{border-color:var(--ink);background:var(--ink);color:#fff;}
+.field-label{font-size:12.5px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;margin:16px 0 6px;display:block;}
+.select-acct{width:100%;padding:11px 12px;border:1.5px solid var(--line);border-radius:9px;background:#fff;font-size:14.5px;color:var(--ink);}
+.btn-primary{width:100%;margin-top:22px;padding:13px;border:none;border-radius:9px;background:var(--ink);color:#fff;font-weight:600;font-size:14.5px;transition:.15s;}
+.btn-primary:hover{background:var(--ink-light);}
+.login-hint{margin-top:18px;font-size:12.5px;color:var(--gray);text-align:center;line-height:1.5;}
+
+#app{display:none;min-height:100vh;}
+.shell{display:flex;min-height:100vh;}
+.sidebar{width:230px;flex:none;background:var(--ink);color:#fff;display:flex;flex-direction:column;padding:22px 0;}
+.side-brand{display:flex;align-items:center;gap:9px;padding:0 20px 22px;border-bottom:1px solid rgba(255,255,255,0.1);margin-bottom:8px;}
+.side-brand .notch{width:26px;height:26px;border-radius:6px;background:var(--gold);flex:none;}
+.side-brand span{font-family:var(--font-display);font-weight:700;font-size:18px;}
+.side-school{padding:14px 20px 18px;font-size:12px;color:rgba(255,255,255,0.55);border-bottom:1px solid rgba(255,255,255,0.1);margin-bottom:10px;line-height:1.5;}
+.side-school b{display:block;color:#fff;font-size:13.5px;font-weight:600;margin-bottom:2px;}
+.tabs{display:flex;flex-direction:column;gap:2px;padding:6px 12px;overflow-y:auto;}
+.tab-btn{display:flex;align-items:center;gap:10px;text-align:left;background:transparent;border:none;color:rgba(255,255,255,0.68);padding:10px 12px;border-radius:8px;font-size:13.5px;font-weight:500;position:relative;transition:.15s;border-left:3px solid transparent;}
+.tab-btn .dot{width:7px;height:7px;border-radius:2px;flex:none;}
+.tab-btn:hover{background:rgba(255,255,255,0.06);color:#fff;}
+.tab-btn.active{background:rgba(255,255,255,0.1);color:#fff;border-left:3px solid var(--gold);}
+.sidebar-footer{margin-top:auto;padding:14px 20px 0;border-top:1px solid rgba(255,255,255,0.1);}
+.who{font-size:12.5px;color:rgba(255,255,255,0.5);margin-bottom:10px;}
+.who b{color:#fff;display:block;font-size:13.5px;}
+.logout-btn{width:100%;padding:9px;border-radius:8px;border:1px solid rgba(255,255,255,0.18);background:transparent;color:#fff;font-size:13px;font-weight:500;}
+.logout-btn:hover{background:rgba(255,255,255,0.08);}
+
+.main{flex:1;padding:30px 36px 60px;max-width:1180px;}
+.page-head{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:24px;flex-wrap:wrap;gap:14px;}
+.page-head h1{font-size:26px;}
+.page-head .sub{color:var(--gray);font-size:14px;margin-top:4px;}
+.subtabs{display:flex;gap:6px;margin-bottom:22px;border-bottom:1px solid var(--line);flex-wrap:wrap;}
+.subtab{padding:9px 4px;margin-right:18px;background:none;border:none;font-size:14px;font-weight:600;color:var(--gray);border-bottom:2px solid transparent;margin-bottom:-1px;}
+.subtab.active{color:var(--ink);border-bottom-color:var(--gold);}
+
+.cards-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:28px;}
+.stat-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 18px 16px;}
+.stat-card .n{font-family:var(--font-display);font-size:30px;font-weight:600;line-height:1;}
+.stat-card .l{font-size:12.5px;color:var(--gray);margin-top:6px;font-weight:500;}
+
+.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:22px 24px;margin-bottom:20px;}
+.panel-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
+.panel-head h3{font-size:16px;}
+.btn-sm{padding:8px 14px;border-radius:8px;border:1px solid var(--ink);background:var(--ink);color:#fff;font-size:13px;font-weight:600;}
+.btn-sm.ghost{background:transparent;color:var(--ink);}
+.btn-sm.danger{background:var(--red);border-color:var(--red);}
+.btn-sm:hover{opacity:.88;}
+.btn-xs{padding:5px 10px;border-radius:6px;border:1.5px solid var(--line);background:#fff;color:var(--ink);font-size:12px;font-weight:600;}
+.btn-xs:hover{border-color:var(--ink);}
+
+table{width:100%;border-collapse:collapse;font-size:13.5px;}
+th{text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--gray);font-weight:600;padding:8px 10px;border-bottom:2px solid var(--gold);}
+td{padding:11px 10px;border-bottom:1px solid var(--line);vertical-align:top;}
+tr:last-child td{border-bottom:none;}
+.mono{font-family:var(--font-mono);}
+.tag{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:600;}
+.tag.green{background:var(--green-bg);color:var(--green);}
+.tag.red{background:var(--red-bg);color:var(--red);}
+.tag.amber{background:var(--amber-bg);color:var(--gold-dark);}
+.tag.gray{background:var(--paper-alt);color:var(--gray);}
+.tag.blue{background:var(--blue-bg);color:var(--ink-light);}
+.del-btn{background:none;border:none;color:var(--red);font-size:12.5px;font-weight:600;padding:4px 6px;}
+.edit-btn{background:none;border:none;color:var(--ink-light);font-size:12.5px;font-weight:600;padding:4px 6px;}
+
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;align-items:end;}
+.f-group label{display:block;font-size:12px;font-weight:600;color:var(--gray);margin-bottom:5px;}
+.f-group input,.f-group select,.f-group textarea{width:100%;padding:9px 11px;border:1.5px solid var(--line);border-radius:8px;font-size:13.5px;background:#fff;}
+.f-check{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink);background:var(--paper-alt);padding:7px 10px;border-radius:7px;margin:3px 4px 3px 0;}
+.chips{display:flex;flex-wrap:wrap;}
+
+.selector-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:22px;align-items:center;}
+.selector-row select,.selector-row input[type=date]{padding:9px 14px;border:1.5px solid var(--line);border-radius:9px;font-size:13.5px;background:#fff;font-weight:500;}
+
+.roll-list{display:flex;flex-direction:column;gap:0;}
+.roll-row{display:flex;align-items:center;justify-content:space-between;padding:11px 4px;border-bottom:1px solid var(--line);flex-wrap:wrap;gap:8px;}
+.roll-row:last-child{border-bottom:none;}
+.roll-name{font-size:14px;font-weight:500;}
+.status-btns{display:flex;gap:6px;}
+.stat-btn{padding:6px 12px;border-radius:7px;border:1.5px solid var(--line);background:#fff;font-size:12.5px;font-weight:600;color:var(--gray);}
+.stat-btn.present.on{background:var(--green-bg);border-color:var(--green);color:var(--green);}
+.stat-btn.absent.on{background:var(--red-bg);border-color:var(--red);color:var(--red);}
+.stat-btn.retard.on{background:var(--amber-bg);border-color:var(--gold);color:var(--gold-dark);}
+
+.entry{border-left:3px solid var(--gold);background:var(--paper-alt);border-radius:0 10px 10px 0;padding:14px 16px;margin-bottom:12px;}
+.entry .meta{font-size:11.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.03em;font-weight:600;margin-bottom:6px;display:flex;justify-content:space-between;gap:10px;}
+.entry h4{font-family:var(--font-body);font-size:14.5px;font-weight:700;margin:0 0 4px;}
+.entry p{font-size:13.5px;color:var(--ink-light);margin:0;line-height:1.5;}
+.entry .devoirs{margin-top:8px;padding-top:8px;border-top:1px dashed var(--gray-light);font-size:13px;}
+.entry .devoirs b{color:var(--gold-dark);}
+.entry .acts{display:flex;gap:4px;flex:none;}
+
+.empty{padding:30px 10px;text-align:center;color:var(--gray);font-size:13.5px;}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:11px 20px;border-radius:9px;font-size:13.5px;font-weight:500;opacity:0;pointer-events:none;transition:.25s;z-index:99;max-width:90vw;text-align:center;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(-4px);}
+
+.week-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;}
+.day-col{background:var(--paper-alt);border-radius:10px;padding:10px;min-height:80px;}
+.day-col h4{font-family:var(--font-body);font-size:12.5px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--gray);margin-bottom:8px;}
+.slot{background:#fff;border:1px solid var(--line);border-left:3px solid var(--green);border-radius:7px;padding:7px 9px;margin-bottom:6px;font-size:12px;line-height:1.45;position:relative;}
+.slot b{display:block;font-size:12.5px;}
+.slot .t{font-family:var(--font-mono);font-size:11px;color:var(--gray);}
+.slot .rm{position:absolute;top:4px;right:6px;background:none;border:none;color:var(--red);font-size:13px;font-weight:700;}
+@media(max-width:880px){.week-grid{grid-template-columns:repeat(2,1fr);}}
+
+.msg-card{border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:10px;background:#fff;}
+.msg-card .top{display:flex;justify-content:space-between;font-size:11.5px;color:var(--gray);margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;}
+.msg-card h4{font-size:14.5px;font-family:var(--font-body);font-weight:700;margin:0 0 4px;}
+.msg-card p{font-size:13.5px;color:var(--ink-light);margin:0;line-height:1.5;}
+
+.visa-pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;}
+
+@media(max-width:880px){
+  .shell{flex-direction:column;}
+  .sidebar{width:100%;flex-direction:row;align-items:center;padding:12px 16px;overflow-x:auto;}
+  .side-brand,.side-school,.sidebar-footer{display:none;}
+  .tabs{flex-direction:row;padding:0;overflow-x:auto;}
+  .tab-btn{white-space:nowrap;border-left:none;border-bottom:3px solid transparent;}
+  .tab-btn.active{border-left:none;border-bottom:3px solid var(--gold);}
+  .main{padding:22px 16px 50px;}
+}
+</style>
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-mark"><div class="notch"></div><span>Kampusya</span></div>
+    <div class="login-card">
+      <h1>Connexion</h1>
+      <div class="sub">Connectez-vous avec l'e-mail et le mot de passe fournis par votre établissement.</div>
+      <div id="suspend-banner" style="display:none;background:var(--red-bg);color:var(--red);border-radius:9px;padding:12px 14px;font-size:13px;font-weight:600;margin-bottom:14px;line-height:1.5;"></div>
+      <label class="field-label" style="margin-top:0;">E-mail</label>
+      <input class="select-acct" id="login-email" type="email" placeholder="vous@ecole.ci" autocomplete="username">
+      <label class="field-label">Mot de passe</label>
+      <input class="select-acct" id="login-password" type="password" placeholder="••••••••" autocomplete="current-password">
+      <button class="btn-primary" onclick="doLogin()" id="login-btn">Entrer</button>
+      <div class="login-hint">Mot de passe oublié ? Contactez l'administration de votre établissement.</div>
+    </div>
+  </div>
+</div>
+
+<div id="app">
+  <div class="shell">
+    <div class="sidebar">
+      <div class="side-brand"><div class="notch"></div><span>Kampusya</span></div>
+      <div class="side-school"><b id="side-school-name">—</b><span id="side-school-year"></span></div>
+      <div class="tabs" id="tabs"></div>
+      <div class="sidebar-footer">
+        <div class="who"><b id="who-name">—</b><span id="who-role"></span></div>
+        <button class="logout-btn" onclick="logout()">Se déconnecter</button>
+      </div>
+    </div>
+    <div class="main" id="main"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Client Supabase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+/* ============================================================
+   CONFIGURATION SUPABASE — à renseigner après création du projet
+   (Supabase → Project Settings → API)
+   ============================================================ */
+const SUPABASE_URL = "https://nzldrgzxtciuktyxsjdx.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im56bGRyZ3p4dGNpdWt0eXhzamR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NTM4MjksImV4cCI6MjA5ODQyOTgyOX0.bc4ieGvx7v-8gyhqRtnt7bQ0zzUlmBESLbdMmkdOneg";
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+/* ============================================================
+   DATA LAYER
+   ============================================================ */
+let db = null;
+let session = { role:null, acctId:null, schoolId:null, fullName:null };
+let ui = { adminTab:'overview', adminAcctTab:'profs', profTab:'appel', eleveTab:'emploi', parentTab:'absences', superTab:'schools',
+           profClass:null, profSubject:null, parentChild:null, appelDate: todayISO(),
+           schedClass:null, presDate: todayISO(), notesAdminClass:null, progClass:null, progSubject:null,
+           editProf:null, editStudent:null, editParent:null, comportClass:null,
+           msgScope:'eleves', msgClassId:null, msgRecType:'eleve', msgRecId:null };
+
+function todayISO(){ const d=new Date(); return d.toISOString().slice(0,10); }
+function uid(p){ return p+'_'+Math.random().toString(36).slice(2,9); }
+const DAYS = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+
+function emptySchoolData(){
+  return {
+    school: { id: session.schoolId, name: '', year: '' },
+    classes: [], subjects: [], profs: [], students: [], parents: [], schedule: [],
+    attendance: [], grades: [], evals: [], journal: [],
+    events: [], messages: [], behavior: [], programme: []
+  };
+}
+
+// Charge les données de l'utilisateur connecté :
+// - Super Admin : la liste des écoles + leurs paiements
+// - Autres rôles : le bloc de données pédagogiques de LEUR école uniquement
+async function loadData(){
+  if(session.role === 'super_admin'){
+    const { data: schools, error: e1 } = await sb.from('schools').select('*').order('name');
+    const { data: payments, error: e2 } = await sb.from('payments').select('*').order('pay_date');
+    if(e1 || e2){ showToast('Erreur de chargement des écoles'); db = { schools: [] }; return; }
+    db = { schools: (schools||[]).map(s => ({
+      id: s.id, name: s.name, contact: s.contact, plan: s.plan,
+      status: s.status, nextDue: s.next_due,
+      payments: (payments||[]).filter(p => p.school_id === s.id).map(p => ({date:p.pay_date, amount:Number(p.amount), note:p.note}))
+    })) };
+    return;
+  }
+  const { data: school } = await sb.from('schools').select('*').eq('id', session.schoolId).single();
+  const { data: row } = await sb.from('school_data').select('data').eq('school_id', session.schoolId).maybeSingle();
+  db = (row && row.data && Object.keys(row.data).length) ? row.data : emptySchoolData();
+  db.school = { id: session.schoolId, name: school ? school.name : '', year: school ? school.year : '' };
+  if(!db.evals) db.evals=[]; if(!db.schedule) db.schedule=[]; if(!db.events) db.events=[];
+  if(!db.messages) db.messages=[]; if(!db.behavior) db.behavior=[]; if(!db.programme) db.programme=[];
+}
+
+// Sauvegarde le bloc de données pédagogiques de l'école courante.
+// (Le Super Admin sauvegarde écoles/paiements via des appels dédiés — voir plus bas.)
+async function saveData(){
+  if(session.role === 'super_admin') return;
+  try{
+    await sb.from('school_data').upsert({
+      school_id: session.schoolId,
+      data: db,
+      updated_at: new Date().toISOString()
+    });
+  }catch(e){ console.error('Erreur de sauvegarde', e); showToast('Erreur de sauvegarde — vérifiez votre connexion'); }
+}
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 1900);
+}
+function nameOf(arr,id){ const o=arr.find(x=>x.id===id); return o?o.name:''; }
+function fmtDate(d){
+  const dt = new Date(d+'T00:00:00');
+  return dt.toLocaleDateString('fr-FR', {weekday:'short', day:'numeric', month:'short'});
+}
+
+/* ============================================================
+   LOGIN
+   ============================================================ */
+async function doLogin(){
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const banner = document.getElementById('suspend-banner');
+  const btn = document.getElementById('login-btn');
+  banner.style.display = 'none';
+  if(!email || !password){ showToast('Renseignez l\'e-mail et le mot de passe'); return; }
+  btn.disabled = true; btn.textContent = 'Connexion...';
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  btn.disabled = false; btn.textContent = 'Entrer';
+  if(error){ showToast('E-mail ou mot de passe incorrect'); return; }
+  await afterLogin();
+}
+
+// Appelé après une connexion réussie (ou au chargement si une session existe déjà)
+async function afterLogin(){
+  const banner = document.getElementById('suspend-banner');
+  const { data: { user } } = await sb.auth.getUser();
+  if(!user){ return; }
+  const { data: profile, error: pErr } = await sb.from('profiles').select('*').eq('id', user.id).single();
+  if(pErr || !profile){
+    banner.textContent = 'Aucun profil associé à ce compte. Contactez votre administration.';
+    banner.style.display = 'block';
+    await sb.auth.signOut();
+    return;
+  }
+  // 'super_admin' en base devient 'super' côté interface (clé utilisée par TABS/roleLabel)
+  session.role = profile.role === 'super_admin' ? 'super' : profile.role;
+  session.acctId = user.id;
+  session.schoolId = profile.school_id;
+  session.fullName = profile.full_name;
+
+  if(session.role !== 'super'){
+    const { data: school } = await sb.from('schools').select('status,name').eq('id', session.schoolId).single();
+    if(school && school.status === 'suspendu'){
+      banner.textContent = 'Accès suspendu pour '+school.name+' — abonnement impayé. Contactez l\'administration de l\'établissement pour rétablir l\'accès.';
+      banner.style.display = 'block';
+      await sb.auth.signOut();
+      return;
+    }
+  }
+  await loadData();
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app').style.display='block';
+  renderShell();
+}
+
+async function logout(){
+  await sb.auth.signOut();
+  session = { role:null, acctId:null, schoolId:null, fullName:null };
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-password').value = '';
+  document.getElementById('app').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+}
+
+/* ============================================================
+   SHELL / NAV
+   ============================================================ */
+const TABS = {
+  admin:[ ['overview','Tableau de bord','#C9952C'], ['classes','Classes','#2F6B4F'], ['subjects','Matières','#1B2A4A'],
+          ['schedule',"Emplois du temps",'#2F6B4F'], ['comptes','Comptes','#B23A33'], ['presences','Présences','#B23A33'],
+          ['notes','Notes','#C9952C'], ['programme','Programme','#A87820'], ['agenda','Agenda','#1B2A4A'],
+          ['comportement','Comportement','#A87820'], ['messagerie','Messagerie','#2E4271'] ],
+  prof:[ ['appel','Appel','#2F6B4F'], ['notes','Notes','#C9952C'], ['cahier','Cahier de texte','#1B2A4A'],
+         ['programme','Programme annuel','#A87820'], ['agenda','Agenda','#1B2A4A'], ['comportement','Comportement','#B23A33'],
+         ['messagerie','Messages','#2E4271'] ],
+  eleve:[ ['emploi','Emploi du temps','#2F6B4F'], ['notes','Mes notes','#C9952C'], ['cahier','Cahier de texte','#1B2A4A'],
+          ['programme','Programme','#A87820'], ['agenda','Agenda','#1B2A4A'], ['comportement','Comportement','#B23A33'],
+          ['messagerie','Messages','#2E4271'] ],
+  parent:[ ['absences','Absences','#B23A33'], ['notes','Notes','#C9952C'], ['cahier','Cahier de texte','#1B2A4A'],
+           ['agenda','Agenda','#1B2A4A'], ['comportement','Comportement','#A87820'], ['messagerie','Messages','#2E4271'] ],
+  super:[ ['schools','Écoles partenaires','#C9952C'] ]
+};
+
+function renderShell(){
+  if(session.role==='super'){
+    document.getElementById('side-school-name').textContent = 'AN Technology Group';
+    document.getElementById('side-school-year').textContent = 'Espace Super Admin';
+  }else{
+    document.getElementById('side-school-name').textContent = db.school.name;
+    document.getElementById('side-school-year').textContent = 'Année '+db.school.year;
+  }
+  const who = currentAccount();
+  document.getElementById('who-name').textContent = who.name;
+  document.getElementById('who-role').textContent = roleLabel();
+  const tabsEl = document.getElementById('tabs');
+  const activeTab = currentTabKey();
+  tabsEl.innerHTML = TABS[session.role].map(function(t){
+    const key=t[0], label=t[1], color=t[2];
+    return '<button class="tab-btn '+(key===activeTab?'active':'')+'" onclick="setTab(\''+key+'\')">'+
+      '<span class="dot" style="background:'+color+'"></span>'+label+'</button>';
+  }).join('');
+  renderMain();
+}
+function roleLabel(){
+  if(session.role==='admin') return 'Administration';
+  if(session.role==='prof') return 'Professeur';
+  if(session.role==='eleve') return 'Élève';
+  if(session.role==='super') return 'Super Administrateur';
+  return "Parent d'élève";
+}
+function currentAccount(){
+  if(session.role==='admin') return {name: session.fullName || 'Administration'};
+  if(session.role==='super') return {name: session.fullName || 'AN Technology Group'};
+  if(session.role==='prof') return db.profs.find(p=>p.id===session.acctId) || {name: session.fullName || ''};
+  if(session.role==='eleve') return db.students.find(s=>s.id===session.acctId) || {name: session.fullName || ''};
+  return db.parents.find(p=>p.id===session.acctId) || {name: session.fullName || ''};
+}
+function currentTabKey(){
+  if(session.role==='admin') return ui.adminTab;
+  if(session.role==='prof') return ui.profTab;
+  if(session.role==='eleve') return ui.eleveTab;
+  if(session.role==='super') return ui.superTab;
+  return ui.parentTab;
+}
+function setTab(key){
+  if(session.role==='admin') ui.adminTab = key;
+  if(session.role==='prof') ui.profTab = key;
+  if(session.role==='eleve') ui.eleveTab = key;
+  if(session.role==='super') ui.superTab = key;
+  if(session.role==='parent') ui.parentTab = key;
+  renderShell();
+}
+function renderMain(){
+  const m = document.getElementById('main');
+  if(session.role==='admin') m.innerHTML = renderAdmin();
+  if(session.role==='prof') m.innerHTML = renderProf();
+  if(session.role==='eleve') m.innerHTML = renderEleve();
+  if(session.role==='parent') m.innerHTML = renderParent();
+  if(session.role==='super') m.innerHTML = renderSuper();
+}
+/* ============================================================
+   ADMIN
+   ============================================================ */
+function renderAdmin(){
+  if(ui.adminTab==='overview') return adminOverview();
+  if(ui.adminTab==='classes') return adminClasses();
+  if(ui.adminTab==='subjects') return adminSubjects();
+  if(ui.adminTab==='schedule') return adminSchedule();
+  if(ui.adminTab==='comptes') return adminComptes();
+  if(ui.adminTab==='presences') return adminPresences();
+  if(ui.adminTab==='notes') return adminNotes();
+  if(ui.adminTab==='programme') return adminProgramme();
+  if(ui.adminTab==='agenda') return adminAgenda();
+  if(ui.adminTab==='comportement') return adminComportement();
+  if(ui.adminTab==='messagerie') return adminMessagerie();
+}
+
+function adminOverview(){
+  return '<div class="page-head"><div><h1>Tableau de bord</h1><div class="sub">'+db.school.name+' — Année '+db.school.year+'</div></div></div>'+
+  '<div class="cards-row">'+
+    '<div class="stat-card"><div class="n">'+db.classes.length+'</div><div class="l">Classes</div></div>'+
+    '<div class="stat-card"><div class="n">'+db.profs.length+'</div><div class="l">Professeurs</div></div>'+
+    '<div class="stat-card"><div class="n">'+db.students.length+'</div><div class="l">Élèves</div></div>'+
+    '<div class="stat-card"><div class="n">'+db.parents.length+'</div><div class="l">Comptes parents</div></div>'+
+  '</div>'+
+  '<div class="panel"><div class="panel-head"><h3>Activité récente — cahier de texte</h3></div>'+
+    (db.journal.slice(-4).reverse().map(j=>{
+      const cls = db.classes.find(c=>c.id===j.classId), sub = db.subjects.find(s=>s.id===j.subjectId);
+      return '<div class="entry"><div class="meta">'+j.date+' · '+(cls?cls.name:'')+' · '+(sub?sub.name:'')+'</div><h4>'+j.contenu+'</h4>'+(j.devoirs?'<p class="devoirs"><b>Devoirs —</b> '+j.devoirs+'</p>':'')+'</div>';
+    }).join('') || '<div class="empty">Aucune entrée pour le moment.</div>')+
+  '</div>';
+}
+
+function adminClasses(){
+  return '<div class="page-head"><div><h1>Classes</h1><div class="sub">Niveaux et classes de l\'établissement</div></div></div>'+
+  '<div class="panel"><div class="panel-head"><h3>Ajouter une classe</h3></div>'+
+  '<div class="form-grid"><div class="f-group"><label>Nom de la classe</label><input id="cls-name" placeholder="Ex. 4ème C"></div>'+
+  '<div class="f-group"><label>Niveau</label><input id="cls-level" placeholder="Ex. Collège"></div>'+
+  '<button class="btn-sm" onclick="addClass()">Ajouter</button></div></div>'+
+  '<div class="panel"><table><thead><tr><th>Classe</th><th>Niveau</th><th>Élèves</th><th></th></tr></thead><tbody>'+
+  (db.classes.map(c=>'<tr><td><b>'+c.name+'</b></td><td>'+c.level+'</td><td>'+db.students.filter(s=>s.classId===c.id).length+'</td>'+
+    '<td><button class="del-btn" onclick="removeClass(\''+c.id+'\')">Supprimer</button></td></tr>').join('') || '<tr><td colspan="4" class="empty">Aucune classe.</td></tr>')+
+  '</tbody></table></div>';
+}
+function addClass(){
+  const name = document.getElementById('cls-name').value.trim();
+  const level = document.getElementById('cls-level').value.trim();
+  if(!name) return showToast('Indiquez un nom de classe');
+  db.classes.push({id:uid('c'), name, level: level||'—'});
+  saveData(); renderMain(); showToast('Classe ajoutée');
+}
+function removeClass(id){ db.classes = db.classes.filter(c=>c.id!==id); saveData(); renderMain(); }
+
+function adminSubjects(){
+  return '<div class="page-head"><div><h1>Matières</h1><div class="sub">Disciplines enseignées dans l\'établissement</div></div></div>'+
+  '<div class="panel"><div class="panel-head"><h3>Ajouter une matière</h3></div>'+
+  '<div class="form-grid"><div class="f-group"><label>Nom de la matière</label><input id="sub-name" placeholder="Ex. Histoire-Géographie"></div>'+
+  '<button class="btn-sm" onclick="addSubject()">Ajouter</button></div></div>'+
+  '<div class="panel"><table><thead><tr><th>Matière</th><th></th></tr></thead><tbody>'+
+  (db.subjects.map(s=>'<tr><td><b>'+s.name+'</b></td><td><button class="del-btn" onclick="removeSubject(\''+s.id+'\')">Supprimer</button></td></tr>').join('') || '<tr><td colspan="2" class="empty">Aucune matière.</td></tr>')+
+  '</tbody></table></div>';
+}
+function addSubject(){
+  const name = document.getElementById('sub-name').value.trim();
+  if(!name) return showToast('Indiquez un nom de matière');
+  db.subjects.push({id:uid('s'), name});
+  saveData(); renderMain(); showToast('Matière ajoutée');
+}
+function removeSubject(id){ db.subjects = db.subjects.filter(s=>s.id!==id); saveData(); renderMain(); }
+/* ---------- ADMIN: EMPLOIS DU TEMPS ---------- */
+function adminSchedule(){
+  if(!ui.schedClass && db.classes.length) ui.schedClass = db.classes[0].id;
+  const slots = db.schedule.filter(s=>s.classId===ui.schedClass);
+  return '<div class="page-head"><div><h1>Emplois du temps</h1><div class="sub">Publiez, modifiez ou supprimez l\'emploi du temps de chaque classe</div></div></div>'+
+  '<div class="selector-row"><select onchange="ui.schedClass=this.value; renderMain();">'+
+    db.classes.map(c=>'<option value="'+c.id+'" '+(c.id===ui.schedClass?'selected':'')+'>'+c.name+'</option>').join('')+
+  '</select></div>'+
+  '<div class="panel"><div class="panel-head"><h3>Ajouter un créneau</h3></div>'+
+  '<div class="form-grid">'+
+    '<div class="f-group"><label>Jour</label><select id="sc-day">'+DAYS.map((d,i)=>'<option value="'+i+'">'+d+'</option>').join('')+'</select></div>'+
+    '<div class="f-group"><label>Début</label><input id="sc-start" type="time" value="08:00"></div>'+
+    '<div class="f-group"><label>Fin</label><input id="sc-end" type="time" value="09:00"></div>'+
+    '<div class="f-group"><label>Matière</label><select id="sc-subject">'+db.subjects.map(s=>'<option value="'+s.id+'">'+s.name+'</option>').join('')+'</select></div>'+
+    '<div class="f-group"><label>Professeur</label><select id="sc-prof">'+db.profs.map(p=>'<option value="'+p.id+'">'+p.name+'</option>').join('')+'</select></div>'+
+    '<button class="btn-sm" onclick="addSlot()">Publier</button>'+
+  '</div></div>'+
+  '<div class="panel"><div class="panel-head"><h3>Vue hebdomadaire</h3></div>'+
+  '<div class="week-grid">'+DAYS.map((d,i)=>{
+    const daySlots = slots.filter(s=>s.day===i).sort((a,b)=>a.start.localeCompare(b.start));
+    return '<div class="day-col"><h4>'+d+'</h4>'+(daySlots.map(s=>{
+      const sub=db.subjects.find(x=>x.id===s.subjectId), prof=db.profs.find(x=>x.id===s.profId);
+      return '<div class="slot"><button class="rm" onclick="removeSlot(\''+s.id+'\')">&times;</button><span class="t">'+s.start+'–'+s.end+'</span><b>'+(sub?sub.name:'')+'</b>'+(prof?prof.name:'')+'</div>';
+    }).join('') || '<div style="font-size:11.5px;color:var(--gray);">—</div>')+'</div>';
+  }).join('')+'</div></div>';
+}
+function addSlot(){
+  const day = Number(document.getElementById('sc-day').value);
+  const start = document.getElementById('sc-start').value, end = document.getElementById('sc-end').value;
+  const subjectId = document.getElementById('sc-subject').value, profId = document.getElementById('sc-prof').value;
+  if(!start || !end) return showToast('Indiquez les horaires');
+  db.schedule.push({id:uid('sc'), classId:ui.schedClass, day, start, end, subjectId, profId});
+  saveData(); renderMain(); showToast('Créneau publié');
+}
+function removeSlot(id){ db.schedule = db.schedule.filter(s=>s.id!==id); saveData(); renderMain(); }
+
+/* ---------- ADMIN: COMPTES (avec édition) ---------- */
+function adminComptes(){
+  return '<div class="page-head"><div><h1>Comptes</h1><div class="sub">Créez et modifiez les comptes professeurs, élèves et parents</div></div></div>'+
+  '<div class="subtabs">'+
+    '<button class="subtab '+(ui.adminAcctTab==='profs'?'active':'')+'" onclick="setAcctTab(\'profs\')">Professeurs ('+db.profs.length+')</button>'+
+    '<button class="subtab '+(ui.adminAcctTab==='eleves'?'active':'')+'" onclick="setAcctTab(\'eleves\')">Élèves ('+db.students.length+')</button>'+
+    '<button class="subtab '+(ui.adminAcctTab==='parents'?'active':'')+'" onclick="setAcctTab(\'parents\')">Parents ('+db.parents.length+')</button>'+
+  '</div>'+
+  (ui.adminAcctTab==='profs'?comptesProfs():ui.adminAcctTab==='eleves'?comptesEleves():comptesParents());
+}
+function setAcctTab(t){ ui.adminAcctTab=t; ui.editProf=null; ui.editStudent=null; ui.editParent=null; renderMain(); }
+
+// Crée un vrai compte de connexion (Supabase Auth) pour un professeur, élève ou parent,
+// via la fonction serverless sécurisée, puis affiche le mot de passe temporaire à
+// transmettre manuellement (WhatsApp, SMS...) à la personne concernée.
+function generateTempPassword(){
+  return Math.random().toString(36).slice(-6) + Math.floor(10+Math.random()*89) + '!';
+}
+async function createSchoolAccount(email, fullName, role, targetSchoolId){
+  const tempPassword = generateTempPassword();
+  const { data: { session: authSession } } = await sb.auth.getSession();
+  const requesterToken = authSession ? authSession.access_token : null;
+  try{
+    const res = await fetch('/.netlify/functions/create-account', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: tempPassword, full_name: fullName, role, school_id: targetSchoolId || session.schoolId, requesterToken })
+    });
+    if(!res.ok){
+      const msg = await res.text();
+      showToast('Erreur : ' + msg);
+      return null;
+    }
+    const result = await res.json();
+    showToast('Compte créé — mot de passe temporaire : ' + tempPassword + ' (à transmettre à ' + fullName + ')');
+    return result.id;
+  }catch(e){
+    showToast('Erreur réseau — vérifiez que la fonction Netlify est bien déployée');
+    return null;
+  }
+}
+
+function comptesProfs(){
+  return '<div class="panel"><div class="panel-head"><h3>Nouveau compte professeur</h3></div>'+
+  '<div class="form-grid"><div class="f-group"><label>Nom complet</label><input id="pf-name" placeholder="Ex. Mme Aya N\'Guessan"></div>'+
+  '<div class="f-group"><label>Email</label><input id="pf-email" placeholder="email@ecole.ci"></div></div>'+
+  '<div style="margin-top:12px;"><label class="field-label" style="margin-top:0;">Matières enseignées</label><div class="chips">'+
+    (db.subjects.map(s=>'<label class="f-check"><input type="checkbox" class="pf-sub" value="'+s.id+'"> '+s.name+'</label>').join('') || '<span class="empty">Créez d\'abord des matières</span>')+
+  '</div></div>'+
+  '<div style="margin-top:6px;"><label class="field-label">Classes en charge</label><div class="chips">'+
+    (db.classes.map(c=>'<label class="f-check"><input type="checkbox" class="pf-cls" value="'+c.id+'"> '+c.name+'</label>').join('') || '<span class="empty">Créez d\'abord des classes</span>')+
+  '</div></div>'+
+  '<button class="btn-sm" style="margin-top:14px;" onclick="addProf()">Créer le compte</button></div>'+
+  '<div class="panel"><table><thead><tr><th>Professeur</th><th>Email</th><th>Matières</th><th>Classes</th><th></th></tr></thead><tbody>'+
+  (db.profs.map(p=>{
+    if(ui.editProf===p.id){
+      return '<tr><td colspan="5"><div class="form-grid">'+
+        '<div class="f-group"><label>Nom</label><input id="ep-name" value="'+p.name+'"></div>'+
+        '<div class="f-group"><label>Email</label><input id="ep-email" value="'+p.email+'"></div></div>'+
+        '<div style="margin-top:10px;"><label class="field-label" style="margin-top:0;">Matières</label><div class="chips">'+
+        db.subjects.map(s=>'<label class="f-check"><input type="checkbox" class="ep-sub" value="'+s.id+'" '+(p.subjectIds.includes(s.id)?'checked':'')+'> '+s.name+'</label>').join('')+'</div></div>'+
+        '<div style="margin-top:6px;"><label class="field-label">Classes</label><div class="chips">'+
+        db.classes.map(c=>'<label class="f-check"><input type="checkbox" class="ep-cls" value="'+c.id+'" '+(p.classIds.includes(c.id)?'checked':'')+'> '+c.name+'</label>').join('')+'</div></div>'+
+        '<div style="margin-top:12px;display:flex;gap:8px;"><button class="btn-sm" onclick="saveProf(\''+p.id+'\')">Enregistrer</button><button class="btn-sm ghost" onclick="ui.editProf=null;renderMain();">Annuler</button></div>'+
+        '</td></tr>';
+    }
+    return '<tr><td><b>'+p.name+'</b></td><td>'+p.email+'</td>'+
+      '<td>'+(p.subjectIds.map(id=>nameOf(db.subjects,id)).join(', ')||'—')+'</td>'+
+      '<td>'+(p.classIds.map(id=>nameOf(db.classes,id)).join(', ')||'—')+'</td>'+
+      '<td><button class="edit-btn" onclick="ui.editProf=\''+p.id+'\';renderMain();">Modifier</button><button class="del-btn" onclick="removeProf(\''+p.id+'\')">Supprimer</button></td></tr>';
+  }).join('') || '<tr><td colspan="5" class="empty">Aucun professeur.</td></tr>')+
+  '</tbody></table></div>';
+}
+async function addProf(){
+  const name = document.getElementById('pf-name').value.trim();
+  const email = document.getElementById('pf-email').value.trim();
+  const subjectIds = [...document.querySelectorAll('.pf-sub:checked')].map(c=>c.value);
+  const classIds = [...document.querySelectorAll('.pf-cls:checked')].map(c=>c.value);
+  if(!name) return showToast('Indiquez un nom');
+  if(!email) return showToast('Indiquez un e-mail — il sert à la connexion');
+  const id = await createSchoolAccount(email, name, 'prof');
+  if(!id) return;
+  db.profs.push({id, name, email, subjectIds, classIds});
+  saveData(); renderMain();
+}
+function saveProf(id){
+  const p = db.profs.find(x=>x.id===id);
+  p.name = document.getElementById('ep-name').value.trim() || p.name;
+  p.email = document.getElementById('ep-email').value.trim();
+  p.subjectIds = [...document.querySelectorAll('.ep-sub:checked')].map(c=>c.value);
+  p.classIds = [...document.querySelectorAll('.ep-cls:checked')].map(c=>c.value);
+  ui.editProf = null; saveData(); renderMain(); showToast('Compte mis à jour');
+}
+function removeProf(id){ db.profs = db.profs.filter(p=>p.id!==id); saveData(); renderMain(); }
+
+function comptesEleves(){
+  return '<div class="panel"><div class="panel-head"><h3>Nouvel élève</h3></div>'+
+  '<div class="form-grid"><div class="f-group"><label>Nom complet</label><input id="el-name" placeholder="Ex. Kouadio Affoué"></div>'+
+  '<div class="f-group"><label>E-mail (connexion)</label><input id="el-email" placeholder="eleve@ecole.ci"></div>'+
+  '<div class="f-group"><label>Classe</label><select id="el-class">'+(db.classes.map(c=>'<option value="'+c.id+'">'+c.name+'</option>').join('') || '<option disabled>Aucune classe</option>')+'</select></div>'+
+  '<button class="btn-sm" onclick="addStudent()">Ajouter</button></div></div>'+
+  '<div class="panel"><table><thead><tr><th>Élève</th><th>Classe</th><th>Parent lié</th><th></th></tr></thead><tbody>'+
+  (db.students.map(s=>{
+    const par = db.parents.find(p=>p.studentIds.includes(s.id));
+    if(ui.editStudent===s.id){
+      return '<tr><td colspan="4"><div class="form-grid">'+
+        '<div class="f-group"><label>Nom</label><input id="es-name" value="'+s.name+'"></div>'+
+        '<div class="f-group"><label>Classe</label><select id="es-class">'+db.classes.map(c=>'<option value="'+c.id+'" '+(c.id===s.classId?'selected':'')+'>'+c.name+'</option>').join('')+'</select></div>'+
+        '<div style="display:flex;gap:8px;"><button class="btn-sm" onclick="saveStudent(\''+s.id+'\')">Enregistrer</button><button class="btn-sm ghost" onclick="ui.editStudent=null;renderMain();">Annuler</button></div>'+
+        '</div></td></tr>';
+    }
+    const cls = db.classes.find(c=>c.id===s.classId);
+    return '<tr><td><b>'+s.name+'</b></td><td>'+(cls?cls.name:'—')+'</td><td>'+(par?par.name:'<span style="color:var(--gray)">non lié</span>')+'</td>'+
+    '<td><button class="edit-btn" onclick="ui.editStudent=\''+s.id+'\';renderMain();">Modifier</button><button class="del-btn" onclick="removeStudent(\''+s.id+'\')">Supprimer</button></td></tr>';
+  }).join('') || '<tr><td colspan="4" class="empty">Aucun élève.</td></tr>')+
+  '</tbody></table></div>';
+}
+async function addStudent(){
+  const name = document.getElementById('el-name').value.trim();
+  const email = document.getElementById('el-email').value.trim();
+  const classId = document.getElementById('el-class').value;
+  if(!name) return showToast('Indiquez un nom');
+  if(!email) return showToast('Indiquez un e-mail — il sert à la connexion');
+  if(!classId) return showToast('Créez d\'abord une classe');
+  const id = await createSchoolAccount(email, name, 'eleve');
+  if(!id) return;
+  db.students.push({id, name, email, classId});
+  saveData(); renderMain();
+}
+function saveStudent(id){
+  const s = db.students.find(x=>x.id===id);
+  s.name = document.getElementById('es-name').value.trim() || s.name;
+  s.classId = document.getElementById('es-class').value;
+  ui.editStudent = null; saveData(); renderMain(); showToast('Fiche élève mise à jour');
+}
+function removeStudent(id){ db.students = db.students.filter(s=>s.id!==id); saveData(); renderMain(); }
+
+function comptesParents(){
+  return '<div class="panel"><div class="panel-head"><h3>Nouveau compte parent</h3></div>'+
+  '<div class="form-grid"><div class="f-group"><label>Nom complet</label><input id="pa-name" placeholder="Ex. M. Yao Konan"></div>'+
+  '<div class="f-group"><label>Email</label><input id="pa-email" placeholder="email@gmail.com"></div></div>'+
+  '<div style="margin-top:12px;"><label class="field-label" style="margin-top:0;">Enfant(s) lié(s)</label><div class="chips">'+
+  (db.students.map(s=>'<label class="f-check"><input type="checkbox" class="pa-child" value="'+s.id+'"> '+s.name+'</label>').join('') || '<span class="empty">Créez d\'abord des élèves</span>')+
+  '</div></div><button class="btn-sm" style="margin-top:14px;" onclick="addParent()">Créer le compte</button></div>'+
+  '<div class="panel"><table><thead><tr><th>Parent</th><th>Email</th><th>Enfant(s)</th><th></th></tr></thead><tbody>'+
+  (db.parents.map(p=>{
+    if(ui.editParent===p.id){
+      return '<tr><td colspan="4"><div class="form-grid">'+
+        '<div class="f-group"><label>Nom</label><input id="epa-name" value="'+p.name+'"></div>'+
+        '<div class="f-group"><label>Email</label><input id="epa-email" value="'+p.email+'"></div></div>'+
+        '<div style="margin-top:10px;"><label class="field-label" style="margin-top:0;">Enfants</label><div class="chips">'+
+        db.students.map(s=>'<label class="f-check"><input type="checkbox" class="epa-child" value="'+s.id+'" '+(p.studentIds.includes(s.id)?'checked':'')+'> '+s.name+'</label>').join('')+'</div></div>'+
+        '<div style="margin-top:12px;display:flex;gap:8px;"><button class="btn-sm" onclick="saveParent(\''+p.id+'\')">Enregistrer</button><button class="btn-sm ghost" onclick="ui.editParent=null;renderMain();">Annuler</button></div>'+
+        '</td></tr>';
+    }
+    return '<tr><td><b>'+p.name+'</b></td><td>'+p.email+'</td><td>'+(p.studentIds.map(id=>nameOf(db.students,id)).join(', ')||'—')+'</td>'+
+    '<td><button class="edit-btn" onclick="ui.editParent=\''+p.id+'\';renderMain();">Modifier</button><button class="del-btn" onclick="removeParent(\''+p.id+'\')">Supprimer</button></td></tr>';
+  }).join('') || '<tr><td colspan="4" class="empty">Aucun parent.</td></tr>')+
+  '</tbody></table></div>';
+}
+async function addParent(){
+  const name = document.getElementById('pa-name').value.trim();
+  const email = document.getElementById('pa-email').value.trim();
+  const studentIds = [...document.querySelectorAll('.pa-child:checked')].map(c=>c.value);
+  if(!name) return showToast('Indiquez un nom');
+  if(!email) return showToast('Indiquez un e-mail — il sert à la connexion');
+  const id = await createSchoolAccount(email, name, 'parent');
+  if(!id) return;
+  db.parents.push({id, name, email, studentIds});
+  saveData(); renderMain();
+}
+function saveParent(id){
+  const p = db.parents.find(x=>x.id===id);
+  p.name = document.getElementById('epa-name').value.trim() || p.name;
+  p.email = document.getElementById('epa-email').value.trim();
+  p.studentIds = [...document.querySelectorAll('.epa-child:checked')].map(c=>c.value);
+  ui.editParent = null; saveData(); renderMain(); showToast('Compte mis à jour');
+}
+function removeParent(id){ db.parents = db.parents.filter(p=>p.id!==id); saveData(); renderMain(); }
+
+/* ---------- ADMIN: PRESENCES (compte rendu journalier) ---------- */
+function adminPresences(){
+  const date = ui.presDate;
+  const recs = db.attendance.filter(a=>a.date===date);
+  return '<div class="page-head"><div><h1>Présences</h1><div class="sub">Compte rendu journalier des absences, par classe et par matière</div></div></div>'+
+  '<div class="selector-row"><input type="date" value="'+date+'" onchange="ui.presDate=this.value; renderMain();"></div>'+
+  (db.classes.map(c=>{
+    const classRecs = recs.filter(r=>r.classId===c.id);
+    if(!classRecs.length) return '';
+    const rows = classRecs.map(r=>{
+      const sub = db.subjects.find(s=>s.id===r.subjectId);
+      const absents = Object.entries(r.statuses).filter(([sid,st])=>st!=='present');
+      if(!absents.length) return '';
+      return '<tr><td><b>'+(sub?sub.name:'')+'</b></td><td>'+absents.map(([sid,st])=>{
+        const stu = db.students.find(s=>s.id===sid);
+        return (stu?stu.name:'')+' <span class="tag '+(st==='absent'?'red':'amber')+'">'+(st==='absent'?'Absent':'Retard')+'</span>';
+      }).join(', ')+'</td></tr>';
+    }).join('');
+    if(!rows.trim()) return '';
+    return '<div class="panel"><div class="panel-head"><h3>'+c.name+'</h3></div><table><thead><tr><th>Matière</th><th>Élèves concernés</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+  }).join('') || '') ||
+  '<div class="panel"><div class="empty">Aucune absence ni retard enregistré pour cette date.</div></div>';
+}
+
+/* ---------- ADMIN: NOTES (vue d'ensemble) ---------- */
+function adminNotes(){
+  if(!ui.notesAdminClass && db.classes.length) ui.notesAdminClass = db.classes[0].id;
+  const students = db.students.filter(s=>s.classId===ui.notesAdminClass);
+  return '<div class="page-head"><div><h1>Notes</h1><div class="sub">Moyennes générées automatiquement par les professeurs</div></div></div>'+
+  '<div class="selector-row"><select onchange="ui.notesAdminClass=this.value; renderMain();">'+
+    db.classes.map(c=>'<option value="'+c.id+'" '+(c.id===ui.notesAdminClass?'selected':'')+'>'+c.name+'</option>').join('')+
+  '</select></div>'+
+  '<div class="panel" style="overflow-x:auto;"><table><thead><tr><th>Élève</th>'+
+    db.subjects.map(s=>'<th>'+s.name+'</th>').join('')+'</tr></thead><tbody>'+
+  (students.map(stu=>{
+    const cells = db.subjects.map(sub=>{
+      const evals = db.evals.filter(e=>e.classId===ui.notesAdminClass && e.subjectId===sub.id);
+      let sum=0, coefSum=0;
+      evals.forEach(ev=>{
+        const g = db.grades.find(x=>x.evalId===ev.id && x.studentId===stu.id);
+        if(g && g.value!==undefined && g.value!==null){ sum += g.value*ev.coef; coefSum += ev.coef; }
+      });
+      return '<td class="mono">'+(coefSum?(sum/coefSum).toFixed(2):'—')+'</td>';
+    }).join('');
+    return '<tr><td><b>'+stu.name+'</b></td>'+cells+'</tr>';
+  }).join('') || '<tr><td colspan="'+(db.subjects.length+1)+'" class="empty">Aucun élève dans cette classe.</td></tr>')+
+  '</tbody></table></div>';
+}
+
+/* ---------- ADMIN: PROGRAMME (lecture seule) ---------- */
+function adminProgramme(){
+  if(!ui.progClass && db.classes.length) ui.progClass = db.classes[0].id;
+  if(!ui.progSubject && db.subjects.length) ui.progSubject = db.subjects[0].id;
+  const items = db.programme.filter(p=>p.classId===ui.progClass && p.subjectId===ui.progSubject);
+  return '<div class="page-head"><div><h1>Programme annuel</h1><div class="sub">Programme et progression des cours, renseignés par les professeurs</div></div></div>'+
+  '<div class="selector-row">'+
+    '<select onchange="ui.progClass=this.value; renderMain();">'+db.classes.map(c=>'<option value="'+c.id+'" '+(c.id===ui.progClass?'selected':'')+'>'+c.name+'</option>').join('')+'</select>'+
+    '<select onchange="ui.progSubject=this.value; renderMain();">'+db.subjects.map(s=>'<option value="'+s.id+'" '+(s.id===ui.progSubject?'selected':'')+'>'+s.name+'</option>').join('')+'</select>'+
+  '</div>'+
+  '<div class="panel"><table><thead><tr><th>Chapitre</th><th>Période</th><th>Statut</th></tr></thead><tbody>'+
+  (items.map(p=>'<tr><td><b>'+p.chapitre+'</b><br><span style="color:var(--gray);font-size:12.5px;">'+(p.description||'')+'</span></td><td>'+p.periode+'</td><td><span class="tag '+(p.statut==='termine'?'green':p.statut==='en_cours'?'amber':'gray')+'">'+statutLabel(p.statut)+'</span></td></tr>').join('') || '<tr><td colspan="3" class="empty">Aucun chapitre renseigné pour cette classe et matière.</td></tr>')+
+  '</tbody></table></div>';
+}
+function statutLabel(s){ return s==='termine'?'Terminé':s==='en_cours'?'En cours':'À venir'; }
+
+/* ---------- ADMIN: AGENDA ---------- */
+function adminAgenda(){
+  const events = db.events.slice().sort((a,b)=>a.date.localeCompare(b.date));
+  return '<div class="page-head"><div><h1>Agenda</h1><div class="sub">Créez des événements, ponctuels ou récurrents, visibles par les professeurs et/ou les étudiants</div></div></div>'+
+  '<div class="panel"><div class="panel-head"><h3>Nouvel événement</h3></div>'+
+  '<div class="form-grid">'+
+    '<div class="f-group"><label>Titre</label><input id="ag-title" placeholder="Ex. Conseil de classe"></div>'+
+    '<div class="f-group"><label>Date</label><input id="ag-date" type="date" value="'+todayISO()+'"></div>'+
+    '<div class="f-group"><label>Récurrence</label><select id="ag-rec"><option value="aucune">Aucune</option><option value="hebdomadaire">Hebdomadaire</option><option value="mensuelle">Mensuelle</option></select></div>'+
+    '<div class="f-group"><label>Classe concernée</label><select id="ag-class"><option value="">Toutes les classes</option>'+db.classes.map(c=>'<option value="'+c.id+'">'+c.name+'</option>').join('')+'</select></div>'+
+  '</div>'+
+  '<div style="margin-top:10px;"><label class="field-label" style="margin-top:0;">Visible par</label><div class="chips">'+
+    '<label class="f-check"><input type="checkbox" id="ag-aud-profs" checked> Professeurs</label>'+
+    '<label class="f-check"><input type="checkbox" id="ag-aud-eleves" checked> Étudiants</label>'+
+    '<label class="f-check"><input type="checkbox" id="ag-aud-parents" checked> Parents</label>'+
+  '</div></div>'+
+  '<div class="f-group" style="margin-top:10px;"><label>Description (optionnel)</label><textarea id="ag-desc" rows="2"></textarea></div>'+
+  '<button class="btn-sm" style="margin-top:12px;" onclick="addEvent()">Publier</button></div>'+
+  '<div class="panel"><table><thead><tr><th>Date</th><th>Événement</th><th>Récurrence</th><th>Audience</th><th></th></tr></thead><tbody>'+
+  (events.map(e=>{
+    const cls = e.classId ? nameOf(db.classes,e.classId) : 'Toutes classes';
+    return '<tr><td class="mono">'+e.date+'</td><td><b>'+e.title+'</b><br><span style="color:var(--gray);font-size:12.5px;">'+cls+(e.description?' · '+e.description:'')+'</span></td>'+
+    '<td>'+recLabel(e.recurrence)+'</td><td>'+e.audience.map(a=>a==='profs'?'Profs':a==='eleves'?'Étudiants':'Parents').join(', ')+'</td>'+
+    '<td><button class="del-btn" onclick="removeEvent(\''+e.id+'\')">Supprimer</button></td></tr>';
+  }).join('') || '<tr><td colspan="5" class="empty">Aucun événement.</td></tr>')+
+  '</tbody></table></div>';
+}
+function recLabel(r){ return r==='hebdomadaire'?'Hebdomadaire':r==='mensuelle'?'Mensuelle':'Ponctuel'; }
+function addEvent(){
+  const title = document.getElementById('ag-title').value.trim();
+  const date = document.getElementById('ag-date').value || todayISO();
+  const recurrence = document.getElementById('ag-rec').value;
+  const classId = document.getElementById('ag-class').value || null;
+  const description = document.getElementById('ag-desc').value.trim();
+  const audience = [];
+  if(document.getElementById('ag-aud-profs').checked) audience.push('profs');
+  if(document.getElementById('ag-aud-eleves').checked) audience.push('eleves');
+  if(document.getElementById('ag-aud-parents').checked) audience.push('parents');
+  if(!title) return showToast('Indiquez un titre');
+  db.events.push({id:uid('ag'), title, date, recurrence, classId, audience, description});
+  saveData(); renderMain(); showToast('Événement publié');
+}
+function removeEvent(id){ db.events = db.events.filter(e=>e.id!==id); saveData(); renderMain(); }
+
+/* ---------- ADMIN: COMPORTEMENT ---------- */
+function adminComportement(){
+  const entries = db.behavior.slice().sort((a,b)=>b.date.localeCompare(a.date));
+  return '<div class="page-head"><div><h1>Suivi du comportement</h1><div class="sub">Informez les familles en temps réel ; chaque entrée est visée par le parent</div></div></div>'+
+  '<div class="panel"><div class="panel-head"><h3>Nouvelle entrée</h3></div>'+
+  '<div class="form-grid">'+
+    '<div class="f-group"><label>Élève</label><select id="cp-student">'+db.students.map(s=>'<option value="'+s.id+'">'+s.name+'</option>').join('')+'</select></div>'+
+    '<div class="f-group"><label>Type</label><select id="cp-type"><option value="positif">Positif</option><option value="negatif">À signaler</option></select></div>'+
+    '<div class="f-group"><label>Date</label><input id="cp-date" type="date" value="'+todayISO()+'"></div>'+
+  '</div>'+
+  '<div class="f-group" style="margin-top:10px;"><label>Motif</label><textarea id="cp-motif" rows="2" placeholder="Ex. Participation remarquable en classe"></textarea></div>'+
+  '<button class="btn-sm" style="margin-top:12px;" onclick="addBehavior(\'Administration\')">Publier</button></div>'+
+  '<div class="panel"><table><thead><tr><th>Date</th><th>Élève</th><th>Type</th><th>Motif</th><th>Auteur</th><th>Visa parent</th></tr></thead><tbody>'+
+  (entries.map(b=>{
+    const stu = db.students.find(s=>s.id===b.studentId);
+    return '<tr><td class="mono">'+b.date+'</td><td>'+(stu?stu.name:'')+'</td>'+
+    '<td><span class="tag '+(b.type==='positif'?'green':'red')+'">'+(b.type==='positif'?'Positif':'À signaler')+'</span></td>'+
+    '<td>'+b.motif+'</td><td>'+b.author+'</td>'+
+    '<td>'+(b.visa?'<span class="visa-pill" style="color:var(--green);">✓ Visé le '+b.visaDate+'</span>':'<span class="visa-pill" style="color:var(--gray);">En attente</span>')+'</td></tr>';
+  }).join('') || '<tr><td colspan="6" class="empty">Aucune entrée.</td></tr>')+
+  '</tbody></table></div>';
+}
+function addBehavior(author){
+  const studentId = document.getElementById('cp-student').value;
+  const type = document.getElementById('cp-type').value;
+  const date = document.getElementById('cp-date').value || todayISO();
+  const motif = document.getElementById('cp-motif').value.trim();
+  if(!motif) return showToast('Indiquez un motif');
+  const stu = db.students.find(s=>s.id===studentId);
+  db.behavior.push({id:uid('bh'), studentId, classId: stu?stu.classId:null, date, type, motif, author, visa:false, visaDate:null});
+  saveData(); renderMain(); showToast('Famille informée');
+}
+
+/* ---------- ADMIN: MESSAGERIE ---------- */
+function adminMessagerie(){
+  const sent = db.messages.slice().sort((a,b)=>b.date.localeCompare(a.date));
+  return '<div class="page-head"><div><h1>Messagerie</h1><div class="sub">Envoyez des messages aux parents, aux étudiants ou aux professeurs</div></div></div>'+
+  '<div class="panel"><div class="panel-head"><h3>Nouveau message</h3></div>'+
+  '<div class="form-grid">'+
+    '<div class="f-group"><label>Destinataires</label><select id="mg-scope" onchange="ui.msgScope=this.value; renderMain();">'+
+      '<option value="parents" '+(ui.msgScope==='parents'?'selected':'')+'>Tous les parents</option>'+
+      '<option value="eleves" '+(ui.msgScope==='eleves'?'selected':'')+'>Tous les étudiants</option>'+
+      '<option value="profs" '+(ui.msgScope==='profs'?'selected':'')+'>Tous les professeurs</option>'+
+      '<option value="classe" '+(ui.msgScope==='classe'?'selected':'')+'>Une classe entière</option>'+
+      '<option value="individuel" '+(ui.msgScope==='individuel'?'selected':'')+'>Une personne</option>'+
+    '</select></div>'+
+    (ui.msgScope==='classe' ? '<div class="f-group"><label>Classe</label><select id="mg-class">'+db.classes.map(c=>'<option value="'+c.id+'">'+c.name+'</option>').join('')+'</select></div>' : '')+
+    (ui.msgScope==='individuel' ? '<div class="f-group"><label>Rôle</label><select id="mg-rectype" onchange="ui.msgRecType=this.value; renderMain();">'+
+      '<option value="eleve" '+(ui.msgRecType==='eleve'?'selected':'')+'>Étudiant</option>'+
+      '<option value="parent" '+(ui.msgRecType==='parent'?'selected':'')+'>Parent</option>'+
+      '<option value="prof" '+(ui.msgRecType==='prof'?'selected':'')+'>Professeur</option></select></div>'+
+      '<div class="f-group"><label>Personne</label><select id="mg-recid">'+
+      (ui.msgRecType==='eleve'?db.students:ui.msgRecType==='parent'?db.parents:db.profs).map(p=>'<option value="'+p.id+'">'+p.name+'</option>').join('')+
+      '</select></div>' : '')+
+  '</div>'+
+  '<div class="f-group" style="margin-top:10px;"><label>Sujet</label><input id="mg-subject" placeholder="Ex. Réunion de rentrée"></div>'+
+  '<div class="f-group" style="margin-top:10px;"><label>Message</label><textarea id="mg-body" rows="3"></textarea></div>'+
+  '<button class="btn-sm" style="margin-top:12px;" onclick="sendMessage()">Envoyer</button></div>'+
+  '<div class="panel"><div class="panel-head"><h3>Messages envoyés</h3></div>'+
+  (sent.map(m=>'<div class="msg-card"><div class="top"><span>'+m.date+' · '+scopeLabel(m)+'</span><button class="del-btn" onclick="removeMessage(\''+m.id+'\')">Supprimer</button></div><h4>'+m.subject+'</h4><p>'+m.body+'</p></div>').join('') || '<div class="empty">Aucun message envoyé.</div>')+
+  '</div>';
+}
+function scopeLabel(m){
+  if(m.scope==='parents') return 'Tous les parents';
+  if(m.scope==='eleves') return 'Tous les étudiants';
+  if(m.scope==='profs') return 'Tous les professeurs';
+  if(m.scope==='classe') return 'Classe '+nameOf(db.classes,m.classId);
+  if(m.scope==='individuel') return 'À '+individuName(m.recipientType, m.recipientId);
+  return m.scope;
+}
+function individuName(type,id){
+  if(type==='eleve') return nameOf(db.students,id);
+  if(type==='parent') return nameOf(db.parents,id);
+  if(type==='prof') return nameOf(db.profs,id);
+  return '';
+}
+function sendMessage(){
+  const scope = document.getElementById('mg-scope').value;
+  const subject = document.getElementById('mg-subject').value.trim();
+  const body = document.getElementById('mg-body').value.trim();
+  if(!subject || !body) return showToast('Renseignez le sujet et le message');
+  const msg = {id:uid('mg'), from:'Administration', scope, date: todayISO(), subject, body, classId:null, recipientType:null, recipientId:null};
+  if(scope==='classe') msg.classId = document.getElementById('mg-class').value;
+  if(scope==='individuel'){ msg.recipientType = document.getElementById('mg-rectype').value; msg.recipientId = document.getElementById('mg-recid').value; }
+  db.messages.push(msg);
+  saveData(); renderMain(); showToast('Message envoyé');
+}
+function removeMessage(id){ db.messages = db.messages.filter(m=>m.id!==id); saveData(); renderMain(); }
+function messageAppliesTo(m, role, acctId){
+  if(role==='prof'){
+    const prof = db.profs.find(p=>p.id===acctId);
+    if(m.scope==='profs') return true;
+    if(m.scope==='classe') return prof.classIds.includes(m.classId);
+    if(m.scope==='individuel') return m.recipientType==='prof' && m.recipientId===acctId;
+    return false;
+  }
+  if(role==='eleve'){
+    const stu = db.students.find(s=>s.id===acctId);
+    if(m.scope==='eleves') return true;
+    if(m.scope==='classe') return stu.classId===m.classId;
+    if(m.scope==='individuel') return m.recipientType==='eleve' && m.recipientId===acctId;
+    return false;
+  }
+  if(role==='parent'){
+    const par = db.parents.find(p=>p.id===acctId);
+    if(m.scope==='parents') return true;
+    if(m.scope==='classe') return par.studentIds.some(sid=>{const s=db.students.find(x=>x.id===sid); return s && s.classId===m.classId;});
+    if(m.scope==='individuel') return m.recipientType==='parent' && m.recipientId===acctId;
+    return false;
+  }
+  return false;
+}
+function inboxHTML(role, acctId){
+  const list = db.messages.filter(m=>messageAppliesTo(m, role, acctId)).sort((a,b)=>b.date.localeCompare(a.date));
+  return '<div class="panel"><div class="panel-head"><h3>Messagerie</h3></div>'+
+  (list.map(m=>'<div class="msg-card"><div class="top"><span>De '+m.from+' · '+m.date+'</span></div><h4>'+m.subject+'</h4><p>'+m.body+'</p></div>').join('') || '<div class="empty">Aucun message reçu.</div>')+
+  '</div>';
+}
+
+/* ============================================================
+   PROFESSEUR
+   ============================================================ */
+function profSelf(){ return db.profs.find(p=>p.id===session.acctId); }
+function ensureProfSelection(){
+  const prof = profSelf();
+  if(!ui.profClass || !prof.classIds.includes(ui.profClass)) ui.profClass = prof.classIds[0] || null;
+  if(!ui.profSubject || !prof.subjectIds.includes(ui.profSubject)) ui.profSubject = prof.subjectIds[0] || null;
+}
+function classSelector(){
+  const prof = profSelf();
+  return '<select onchange="ui.profClass=this.value; renderMain();">'+
+    prof.classIds.map(id=>{const c=db.classes.find(x=>x.id===id); return c?'<option value="'+c.id+'" '+(c.id===ui.profClass?'selected':'')+'>'+c.name+'</option>':'';}).join('')+
+  '</select>';
+}
+function subjectSelector(){
+  const prof = profSelf();
+  return '<select onchange="ui.profSubject=this.value; renderMain();">'+
+    prof.subjectIds.map(id=>{const s=db.subjects.find(x=>x.id===id); return s?'<option value="'+s.id+'" '+(s.id===ui.profSubject?'selected':'')+'>'+s.name+'</option>':'';}).join('')+
+  '</select>';
+}
+
+function renderProf(){
+  const prof = profSelf();
+  if(!prof.classIds.length || !prof.subjectIds.length){
+    return '<div class="page-head"><div><h1>Bonjour, '+prof.name+'</h1></div></div>'+
+    '<div class="panel"><div class="empty">Aucune classe ou matière ne vous est encore assignée. Contactez l\'administration de l\'établissement.</div></div>';
+  }
+  ensureProfSelection();
+  let body = '';
+  if(ui.profTab==='appel') body = profAppel();
+  if(ui.profTab==='notes') body = profNotes();
+  if(ui.profTab==='cahier') body = profCahier();
+  if(ui.profTab==='programme') body = profProgramme();
+  if(ui.profTab==='agenda') body = agendaListHTML('prof', session.acctId);
+  if(ui.profTab==='comportement') body = profComportement();
+  if(ui.profTab==='messagerie') body = inboxHTML('prof', session.acctId);
+  const needsSelectors = ['appel','notes','cahier','programme'].includes(ui.profTab);
+  return '<div class="page-head"><div><h1>Bonjour, '+prof.name+'</h1><div class="sub">'+roleLabel()+'</div></div></div>'+
+  (needsSelectors ? '<div class="selector-row">'+classSelector()+subjectSelector()+'</div>' : '')+
+  body;
+}
+
+function profAppel(){
+  const students = db.students.filter(s=>s.classId===ui.profClass);
+  const rec = db.attendance.find(a=>a.classId===ui.profClass && a.subjectId===ui.profSubject && a.date===ui.appelDate);
+  const statuses = rec ? rec.statuses : {};
+  const d = new Date(ui.appelDate+'T00:00:00');
+  const yest = new Date(d); yest.setDate(d.getDate()-1);
+  const tom = new Date(d); tom.setDate(d.getDate()+1);
+  return '<div class="panel"><div class="panel-head"><h3>Appel</h3>'+
+    '<div style="display:flex;gap:6px;align-items:center;">'+
+    '<button class="btn-xs" onclick="ui.appelDate=\''+yest.toISOString().slice(0,10)+'\'; renderMain();">&larr; Veille</button>'+
+    '<input type="date" value="'+ui.appelDate+'" onchange="ui.appelDate=this.value; renderMain();" style="padding:8px 10px;border:1.5px solid var(--line);border-radius:8px;">'+
+    '<button class="btn-xs" onclick="ui.appelDate=\''+todayISO()+'\'; renderMain();">Aujourd\'hui</button>'+
+    '<button class="btn-xs" onclick="ui.appelDate=\''+tom.toISOString().slice(0,10)+'\'; renderMain();">Lendemain &rarr;</button>'+
+    '</div></div>'+
+  '<div class="sub" style="margin-bottom:10px;">Vous pouvez faire l\'appel pour une date passée, le jour même, ou anticiper une date future.</div>'+
+  '<div class="roll-list">'+
+  (students.map(s=>{
+    const st = statuses[s.id] || 'present';
+    return '<div class="roll-row"><div class="roll-name">'+s.name+'</div><div class="status-btns">'+
+      '<button class="stat-btn present '+(st==='present'?'on':'')+'" onclick="setAttendance(\''+s.id+'\',\'present\')">Présent</button>'+
+      '<button class="stat-btn retard '+(st==='retard'?'on':'')+'" onclick="setAttendance(\''+s.id+'\',\'retard\')">Retard</button>'+
+      '<button class="stat-btn absent '+(st==='absent'?'on':'')+'" onclick="setAttendance(\''+s.id+'\',\'absent\')">Absent</button>'+
+      '</div></div>';
+  }).join('') || '<div class="empty">Aucun élève dans cette classe.</div>')+
+  '</div></div>';
+}
+function setAttendance(studentId, status){
+  let rec = db.attendance.find(a=>a.classId===ui.profClass && a.subjectId===ui.profSubject && a.date===ui.appelDate);
+  if(!rec){ rec = {id:uid('att'), classId:ui.profClass, subjectId:ui.profSubject, date:ui.appelDate, statuses:{}}; db.attendance.push(rec); }
+  rec.statuses[studentId] = status;
+  saveData(); renderMain();
+}
+
+function profNotes(){
+  const students = db.students.filter(s=>s.classId===ui.profClass);
+  const evals = db.evals.filter(e=>e.classId===ui.profClass && e.subjectId===ui.profSubject);
+  return '<div class="panel"><div class="panel-head"><h3>Nouvelle évaluation</h3></div>'+
+  '<div class="form-grid"><div class="f-group"><label>Intitulé</label><input id="ev-label" placeholder="Ex. Devoir surveillé 1"></div>'+
+  '<div class="f-group"><label>Date</label><input id="ev-date" type="date" value="'+todayISO()+'"></div>'+
+  '<div class="f-group"><label>Coefficient</label><input id="ev-coef" type="number" min="1" value="1" style="width:80px;"></div>'+
+  '<button class="btn-sm" onclick="addEval()">Créer</button></div></div>'+
+  '<div class="panel" style="overflow-x:auto;"><div class="panel-head"><h3>Saisie des notes</h3></div>'+
+  (evals.length===0 ? '<div class="empty">Créez une évaluation pour commencer la saisie.</div>' :
+  '<table><thead><tr><th>Élève</th>'+
+    evals.map(e=>'<th>'+e.label+'<br><span style="font-weight:400;text-transform:none;">coef '+e.coef+'</span></th>').join('')+
+    '<th>Moyenne</th></tr></thead><tbody>'+
+  students.map(s=>{
+    let sum=0, coefSum=0;
+    const cells = evals.map(e=>{
+      const g = db.grades.find(x=>x.evalId===e.id && x.studentId===s.id);
+      const val = g && g.value!==undefined && g.value!==null ? g.value : '';
+      if(val!==''){ sum += val*e.coef; coefSum += e.coef; }
+      const just = g && g.justification ? ' title="Justification : '+g.justification.replace(/"/g,'')+'" style="border-color:var(--gold);"' : '';
+      return '<td><input class="mono" '+just+' style="width:54px;padding:5px 6px;border:1.5px solid var(--line);border-radius:6px;" type="number" min="0" max="20" step="0.5" value="'+val+'" onchange="setGrade(\''+e.id+'\',\''+s.id+'\',this.value)">'+
+        (g && g.justification ? '<div style="font-size:10.5px;color:var(--gold-dark);margin-top:2px;">justifié</div>' : '')+'</td>';
+    }).join('');
+    const moy = coefSum ? (sum/coefSum).toFixed(2) : '—';
+    return '<tr><td><b>'+s.name+'</b></td>'+cells+'<td class="mono"><b>'+moy+'</b>'+(moy!=='—'?'/20':'')+'</td></tr>';
+  }).join('')+'</tbody></table>')+
+  '</div>';
+}
+function addEval(){
+  const label = document.getElementById('ev-label').value.trim();
+  const date = document.getElementById('ev-date').value || todayISO();
+  const coef = Number(document.getElementById('ev-coef').value) || 1;
+  if(!label) return showToast('Indiquez un intitulé');
+  db.evals.push({id:uid('ev'), classId:ui.profClass, subjectId:ui.profSubject, label, date, coef});
+  saveData(); renderMain(); showToast('Évaluation créée — saisissez les notes, chaque étudiant la verra sur son compte');
+}
+function setGrade(evalId, studentId, value){
+  value = value==='' ? undefined : Math.max(0, Math.min(20, Number(value)));
+  let g = db.grades.find(x=>x.evalId===evalId && x.studentId===studentId);
+  if(!g){ g = {id:uid('g'), evalId, studentId, value:undefined, justification:null}; db.grades.push(g); }
+  g.value = value;
+  if(value!==undefined) g.justification = null;
+  saveData(); renderMain();
+}
+
+function profCahier(){
+  const entries = db.journal.filter(j=>j.classId===ui.profClass && j.subjectId===ui.profSubject).slice().reverse();
+  const editing = ui.editJournalId;
+  return '<div class="panel"><div class="panel-head"><h3>'+(editing?'Modifier l\'entrée':'Nouvelle entrée')+'</h3></div>'+
+  '<div class="form-grid" style="grid-template-columns:1fr 1fr;"><div class="f-group"><label>Date</label><input id="cd-date" type="date" value="'+(editing?journalById(editing).date:todayISO())+'"></div><div class="f-group"></div></div>'+
+  '<div class="f-group" style="margin-top:10px;"><label>Contenu du cours</label><textarea id="cd-content" rows="2" placeholder="Ex. Chapitre 4 — Les fractions, exercices 1 à 6">'+(editing?journalById(editing).contenu:'')+'</textarea></div>'+
+  '<div class="f-group" style="margin-top:10px;"><label>Devoirs à faire (optionnel)</label><textarea id="cd-devoirs" rows="2" placeholder="Ex. Exercices 7-10 page 56 pour le 12/03">'+(editing?(journalById(editing).devoirs||''):'')+'</textarea></div>'+
+  '<div style="margin-top:12px;display:flex;gap:8px;">'+
+  (editing ? '<button class="btn-sm" onclick="saveJournal(\''+editing+'\')">Enregistrer</button><button class="btn-sm ghost" onclick="ui.editJournalId=null;renderMain();">Annuler</button>'
+           : '<button class="btn-sm" onclick="addJournal()">Publier</button>')+
+  '</div></div>'+
+  '<div class="panel"><div class="panel-head"><h3>Historique</h3></div>'+
+  (entries.map(j=>'<div class="entry"><div class="meta"><span>'+j.date+'</span><span class="acts"><button class="edit-btn" onclick="ui.editJournalId=\''+j.id+'\';renderMain();">Modifier</button><button class="del-btn" onclick="removeJournal(\''+j.id+'\')">Supprimer</button></span></div><h4>'+j.contenu+'</h4>'+(j.devoirs?'<p class="devoirs"><b>Devoirs —</b> '+j.devoirs+'</p>':'')+'</div>').join('') || '<div class="empty">Aucune entrée pour cette classe.</div>')+
+  '</div>';
+}
+function journalById(id){ return db.journal.find(j=>j.id===id); }
+function addJournal(){
+  const date = document.getElementById('cd-date').value || todayISO();
+  const contenu = document.getElementById('cd-content').value.trim();
+  const devoirs = document.getElementById('cd-devoirs').value.trim();
+  if(!contenu) return showToast('Décrivez le contenu du cours');
+  db.journal.push({id:uid('j'), classId:ui.profClass, subjectId:ui.profSubject, date, contenu, devoirs});
+  saveData(); renderMain(); showToast('Cahier de texte mis à jour');
+}
+function saveJournal(id){
+  const j = journalById(id);
+  j.date = document.getElementById('cd-date').value || j.date;
+  j.contenu = document.getElementById('cd-content').value.trim() || j.contenu;
+  j.devoirs = document.getElementById('cd-devoirs').value.trim();
+  ui.editJournalId = null; saveData(); renderMain(); showToast('Entrée modifiée');
+}
+function removeJournal(id){ db.journal = db.journal.filter(j=>j.id!==id); saveData(); renderMain(); }
+
+function profProgramme(){
+  const items = db.programme.filter(p=>p.classId===ui.profClass && p.subjectId===ui.profSubject);
+  return '<div class="panel"><div class="panel-head"><h3>Ajouter un chapitre</h3></div>'+
+  '<div class="form-grid"><div class="f-group"><label>Chapitre</label><input id="pg-chap" placeholder="Ex. Chapitre 5 — Les volumes"></div>'+
+  '<div class="f-group"><label>Période</label><input id="pg-periode" placeholder="Ex. Mars — Semaine 2"></div>'+
+  '<div class="f-group"><label>Statut</label><select id="pg-statut"><option value="a_venir">À venir</option><option value="en_cours">En cours</option><option value="termine">Terminé</option></select></div></div>'+
+  '<div class="f-group" style="margin-top:10px;"><label>Description (optionnel)</label><textarea id="pg-desc" rows="2"></textarea></div>'+
+  '<button class="btn-sm" style="margin-top:12px;" onclick="addProgramme()">Ajouter</button></div>'+
+  '<div class="panel"><div class="panel-head"><h3>Programme et progression — visible par l\'administration et les étudiants</h3></div>'+
+  '<table><thead><tr><th>Chapitre</th><th>Période</th><th>Statut</th><th></th></tr></thead><tbody>'+
+  (items.map(p=>'<tr><td><b>'+p.chapitre+'</b><br><span style="color:var(--gray);font-size:12.5px;">'+(p.description||'')+'</span></td><td>'+p.periode+'</td>'+
+    '<td><select onchange="updateProgStatut(\''+p.id+'\',this.value)"><option value="a_venir" '+(p.statut==='a_venir'?'selected':'')+'>À venir</option><option value="en_cours" '+(p.statut==='en_cours'?'selected':'')+'>En cours</option><option value="termine" '+(p.statut==='termine'?'selected':'')+'>Terminé</option></select></td>'+
+    '<td><button class="del-btn" onclick="removeProgramme(\''+p.id+'\')">Supprimer</button></td></tr>').join('') || '<tr><td colspan="4" class="empty">Aucun chapitre renseigné.</td></tr>')+
+  '</tbody></table></div>';
+}
+function addProgramme(){
+  const chapitre = document.getElementById('pg-chap').value.trim();
+  const periode = document.getElementById('pg-periode').value.trim();
+  const statut = document.getElementById('pg-statut').value;
+  const description = document.getElementById('pg-desc').value.trim();
+  if(!chapitre) return showToast('Indiquez un chapitre');
+  db.programme.push({id:uid('pg'), classId:ui.profClass, subjectId:ui.profSubject, chapitre, periode, statut, description});
+  saveData(); renderMain(); showToast('Chapitre ajouté au programme');
+}
+function updateProgStatut(id, statut){
+  const p = db.programme.find(x=>x.id===id); p.statut = statut; saveData(); renderMain();
+}
+function removeProgramme(id){ db.programme = db.programme.filter(p=>p.id!==id); saveData(); renderMain(); }
+
+function profComportement(){
+  const prof = profSelf();
+  const myStudents = db.students.filter(s=>prof.classIds.includes(s.classId));
+  const entries = db.behavior.filter(b=>prof.classIds.includes(b.classId)).slice().sort((a,b)=>b.date.localeCompare(a.date));
+  return '<div class="panel"><div class="panel-head"><h3>Signaler un comportement</h3></div>'+
+  '<div class="form-grid"><div class="f-group"><label>Élève</label><select id="cp-student">'+myStudents.map(s=>'<option value="'+s.id+'">'+s.name+'</option>').join('')+'</select></div>'+
+  '<div class="f-group"><label>Type</label><select id="cp-type"><option value="positif">Positif</option><option value="negatif">À signaler</option></select></div>'+
+  '<div class="f-group"><label>Date</label><input id="cp-date" type="date" value="'+todayISO()+'"></div></div>'+
+  '<div class="f-group" style="margin-top:10px;"><label>Motif</label><textarea id="cp-motif" rows="2"></textarea></div>'+
+  '<button class="btn-sm" style="margin-top:12px;" onclick="addBehavior(\''+prof.name+'\')">Publier — la famille sera informée</button></div>'+
+  '<div class="panel"><table><thead><tr><th>Date</th><th>Élève</th><th>Type</th><th>Motif</th><th>Visa parent</th></tr></thead><tbody>'+
+  (entries.map(b=>{
+    const stu = db.students.find(s=>s.id===b.studentId);
+    return '<tr><td class="mono">'+b.date+'</td><td>'+(stu?stu.name:'')+'</td><td><span class="tag '+(b.type==='positif'?'green':'red')+'">'+(b.type==='positif'?'Positif':'À signaler')+'</span></td><td>'+b.motif+'</td>'+
+    '<td>'+(b.visa?'<span class="visa-pill" style="color:var(--green);">✓ Visé</span>':'<span class="visa-pill" style="color:var(--gray);">En attente</span>')+'</td></tr>';
+  }).join('') || '<tr><td colspan="5" class="empty">Aucune entrée.</td></tr>')+
+  '</tbody></table></div>';
+}
+
+/* ============================================================
+   AGENDA — vue partagée (prof / étudiant)
+   ============================================================ */
+function agendaListHTML(role, acctId){
+  let events = db.events.slice().sort((a,b)=>a.date.localeCompare(b.date));
+  events = events.filter(e=>{
+    if(role==='prof'){
+      const prof = db.profs.find(p=>p.id===acctId);
+      if(!e.audience.includes('profs')) return false;
+      return !e.classId || prof.classIds.includes(e.classId);
+    }
+    if(role==='eleve'){
+      const stu = db.students.find(s=>s.id===acctId);
+      if(!e.audience.includes('eleves')) return false;
+      return !e.classId || stu.classId===e.classId;
+    }
+    if(role==='parent'){
+      const par = db.parents.find(p=>p.id===acctId);
+      if(!e.audience.includes('parents')) return false;
+      if(!e.classId) return true;
+      return par.studentIds.some(sid=>{const s=db.students.find(x=>x.id===sid); return s && s.classId===e.classId;});
+    }
+    return true;
+  });
+  return '<div class="panel"><div class="panel-head"><h3>Agenda</h3></div>'+
+  (events.map(e=>'<div class="entry"><div class="meta"><span>'+e.date+' · '+recLabel(e.recurrence)+'</span></div><h4>'+e.title+'</h4>'+(e.description?'<p>'+e.description+'</p>':'')+'</div>').join('') || '<div class="empty">Aucun événement à venir.</div>')+
+  '</div>';
+}
+
+/* ============================================================
+   ÉTUDIANT
+   ============================================================ */
+function eleveSelf(){ return db.students.find(s=>s.id===session.acctId); }
+function renderEleve(){
+  const stu = eleveSelf();
+  const cls = db.classes.find(c=>c.id===stu.classId);
+  let body = '';
+  if(ui.eleveTab==='emploi') body = eleveEmploi(stu);
+  if(ui.eleveTab==='notes') body = eleveNotes(stu);
+  if(ui.eleveTab==='cahier') body = parentCahierBody(stu);
+  if(ui.eleveTab==='programme') body = eleveProgramme(stu);
+  if(ui.eleveTab==='agenda') body = agendaListHTML('eleve', session.acctId);
+  if(ui.eleveTab==='comportement') body = eleveComportement(stu);
+  if(ui.eleveTab==='messagerie') body = inboxHTML('eleve', session.acctId);
+  return '<div class="page-head"><div><h1>'+stu.name+'</h1><div class="sub">'+(cls?cls.name:'')+' · '+roleLabel()+'</div></div></div>'+body;
+}
+
+function eleveEmploi(stu){
+  const slots = db.schedule.filter(s=>s.classId===stu.classId);
+  return '<div class="selector-row"><span class="tag blue">Hebdomadaire</span><span class="tag gray">Valable tout le mois en cours</span></div>'+
+  '<div class="panel"><div class="week-grid">'+DAYS.map((d,i)=>{
+    const daySlots = slots.filter(s=>s.day===i).sort((a,b)=>a.start.localeCompare(b.start));
+    return '<div class="day-col"><h4>'+d+'</h4>'+(daySlots.map(s=>{
+      const sub=db.subjects.find(x=>x.id===s.subjectId), prof=db.profs.find(x=>x.id===s.profId);
+      return '<div class="slot"><span class="t">'+s.start+'–'+s.end+'</span><b>'+(sub?sub.name:'')+'</b>'+(prof?prof.name:'')+'</div>';
+    }).join('') || '<div style="font-size:11.5px;color:var(--gray);">—</div>')+'</div>';
+  }).join('')+'</div></div>';
+}
+
+function eleveNotes(stu){
+  const evals = db.evals.filter(e=>{
+    const cls = db.classes.find(c=>c.id===stu.classId);
+    return e.classId===stu.classId;
+  });
+  const bySubject = {};
+  evals.forEach(e=>{ bySubject[e.subjectId] = bySubject[e.subjectId] || []; bySubject[e.subjectId].push(e); });
+  const subjectIds = Object.keys(bySubject);
+  return subjectIds.map(sid=>{
+    const sub = db.subjects.find(s=>s.id===sid);
+    const list = bySubject[sid];
+    let sum=0, coefSum=0;
+    list.forEach(e=>{ const g = db.grades.find(x=>x.evalId===e.id && x.studentId===stu.id); if(g && g.value!==undefined && g.value!==null){ sum+=g.value*e.coef; coefSum+=e.coef; } });
+    const moy = coefSum ? (sum/coefSum).toFixed(2) : '—';
+    return '<div class="panel"><div class="panel-head"><h3>'+(sub?sub.name:'')+'</h3><span class="tag amber">Moyenne '+moy+(moy!=='—'?'/20':'')+'</span></div>'+
+    '<table><thead><tr><th>Évaluation</th><th>Date</th><th>Coef.</th><th>Note</th></tr></thead><tbody>'+
+    list.map(e=>{
+      const g = db.grades.find(x=>x.evalId===e.id && x.studentId===stu.id);
+      if(g && g.value!==undefined && g.value!==null){
+        return '<tr><td>'+e.label+'</td><td>'+e.date+'</td><td>'+e.coef+'</td><td class="mono"><b>'+g.value+'</b>/20</td></tr>';
+      }
+      if(g && g.justification){
+        return '<tr><td>'+e.label+'</td><td>'+e.date+'</td><td>'+e.coef+'</td><td><span class="tag amber">Justifié — '+g.justification+'</span></td></tr>';
+      }
+      return '<tr><td>'+e.label+'</td><td>'+e.date+'</td><td>'+e.coef+'</td><td><span class="tag red">Non noté — à rattraper</span>'+
+        '<div style="margin-top:6px;display:flex;gap:6px;"><input id="just-'+e.id+'" placeholder="Motif (maladie, absence...)" style="flex:1;padding:6px 8px;border:1.5px solid var(--line);border-radius:6px;font-size:12.5px;"><button class="btn-xs" onclick="submitJustification(\''+e.id+'\')">Envoyer</button></div></td></tr>';
+    }).join('')+
+    '</tbody></table></div>';
+  }).join('') || '<div class="panel"><div class="empty">Aucune évaluation enregistrée pour le moment.</div></div>';
+}
+function submitJustification(evalId){
+  const text = document.getElementById('just-'+evalId).value.trim();
+  if(!text) return showToast('Indiquez un motif');
+  let g = db.grades.find(x=>x.evalId===evalId && x.studentId===session.acctId);
+  if(!g){ g = {id:uid('g'), evalId, studentId:session.acctId, value:undefined, justification:null}; db.grades.push(g); }
+  g.justification = text;
+  saveData(); renderMain(); showToast('Justification envoyée au professeur');
+}
+
+function eleveProgramme(stu){
+  const subjectIds = [...new Set(db.programme.filter(p=>p.classId===stu.classId).map(p=>p.subjectId))];
+  return subjectIds.map(sid=>{
+    const sub = db.subjects.find(s=>s.id===sid);
+    const items = db.programme.filter(p=>p.classId===stu.classId && p.subjectId===sid);
+    return '<div class="panel"><div class="panel-head"><h3>'+(sub?sub.name:'')+'</h3></div>'+
+    '<table><thead><tr><th>Chapitre</th><th>Période</th><th>Statut</th></tr></thead><tbody>'+
+    items.map(p=>'<tr><td><b>'+p.chapitre+'</b></td><td>'+p.periode+'</td><td><span class="tag '+(p.statut==='termine'?'green':p.statut==='en_cours'?'amber':'gray')+'">'+statutLabel(p.statut)+'</span></td></tr>').join('')+
+    '</tbody></table></div>';
+  }).join('') || '<div class="panel"><div class="empty">Aucun programme renseigné pour le moment.</div></div>';
+}
+
+function eleveComportement(stu){
+  const entries = db.behavior.filter(b=>b.studentId===stu.id).slice().sort((a,b)=>b.date.localeCompare(a.date));
+  return '<div class="panel"><table><thead><tr><th>Date</th><th>Type</th><th>Motif</th><th>Auteur</th></tr></thead><tbody>'+
+  (entries.map(b=>'<tr><td class="mono">'+b.date+'</td><td><span class="tag '+(b.type==='positif'?'green':'red')+'">'+(b.type==='positif'?'Positif':'À signaler')+'</span></td><td>'+b.motif+'</td><td>'+b.author+'</td></tr>').join('') || '<tr><td colspan="4" class="empty">Aucune entrée.</td></tr>')+
+  '</tbody></table></div>';
+}
+
+/* ============================================================
+   PARENT
+   ============================================================ */
+function parentSelf(){ return db.parents.find(p=>p.id===session.acctId); }
+function ensureParentChild(){
+  const par = parentSelf();
+  if(!ui.parentChild || !par.studentIds.includes(ui.parentChild)) ui.parentChild = par.studentIds[0] || null;
+}
+function childSelector(){
+  const par = parentSelf();
+  if(par.studentIds.length<=1) return '';
+  return '<select onchange="ui.parentChild=this.value; renderMain();">'+
+    par.studentIds.map(id=>{const s=db.students.find(x=>x.id===id); return s?'<option value="'+s.id+'" '+(s.id===ui.parentChild?'selected':'')+'>'+s.name+'</option>':'';}).join('')+
+  '</select>';
+}
+
+function renderParent(){
+  const par = parentSelf();
+  if(!par.studentIds.length){
+    return '<div class="page-head"><div><h1>Bonjour, '+par.name+'</h1></div></div>'+
+    '<div class="panel"><div class="empty">Aucun enfant n\'est encore lié à votre compte. Contactez l\'administration de l\'établissement.</div></div>';
+  }
+  ensureParentChild();
+  const child = db.students.find(s=>s.id===ui.parentChild);
+  const cls = db.classes.find(c=>c.id===child.classId);
+  let body = '';
+  if(ui.parentTab==='absences') body = parentAbsences(child);
+  if(ui.parentTab==='notes') body = parentNotes(child);
+  if(ui.parentTab==='cahier') body = parentCahierBody(child);
+  if(ui.parentTab==='agenda') body = agendaListHTML('parent', session.acctId);
+  if(ui.parentTab==='comportement') body = parentComportement(child);
+  if(ui.parentTab==='messagerie') body = inboxHTML('parent', session.acctId);
+  return '<div class="page-head"><div><h1>'+child.name+'</h1><div class="sub">'+(cls?cls.name:'')+' · '+roleLabel()+'</div></div></div>'+
+  (childSelector() ? '<div class="selector-row">'+childSelector()+'</div>' : '')+
+  body;
+}
+
+function parentAbsences(child){
+  const recs = db.attendance.filter(a=>a.classId===child.classId && a.statuses[child.id] && a.statuses[child.id]!=='present')
+    .slice().sort((a,b)=>b.date.localeCompare(a.date));
+  return '<div class="panel"><table><thead><tr><th>Date</th><th>Matière</th><th>Statut</th></tr></thead><tbody>'+
+  (recs.map(r=>{
+    const sub = db.subjects.find(s=>s.id===r.subjectId);
+    const st = r.statuses[child.id];
+    return '<tr><td>'+r.date+'</td><td>'+(sub?sub.name:'')+'</td><td><span class="tag '+(st==='absent'?'red':'amber')+'">'+(st==='absent'?'Absent':'Retard')+'</span></td></tr>';
+  }).join('') || '<tr><td colspan="3" class="empty">Aucune absence ni retard enregistré.</td></tr>')+
+  '</tbody></table></div>';
+}
+
+function parentNotes(child){
+  const evals = db.evals.filter(e=>e.classId===child.classId);
+  const bySubject = {};
+  evals.forEach(e=>{ bySubject[e.subjectId] = bySubject[e.subjectId] || []; bySubject[e.subjectId].push(e); });
+  const subjectIds = Object.keys(bySubject);
+  return subjectIds.map(sid=>{
+    const sub = db.subjects.find(s=>s.id===sid);
+    const list = bySubject[sid];
+    let sum=0, coefSum=0;
+    list.forEach(e=>{ const g = db.grades.find(x=>x.evalId===e.id && x.studentId===child.id); if(g && g.value!==undefined && g.value!==null){ sum+=g.value*e.coef; coefSum+=e.coef; } });
+    const moy = coefSum ? (sum/coefSum).toFixed(2) : '—';
+    return '<div class="panel"><div class="panel-head"><h3>'+(sub?sub.name:'')+'</h3><span class="tag amber">Moyenne '+moy+(moy!=='—'?'/20':'')+'</span></div>'+
+    '<table><thead><tr><th>Évaluation</th><th>Date</th><th>Coef.</th><th>Note</th></tr></thead><tbody>'+
+    list.map(e=>{
+      const g = db.grades.find(x=>x.evalId===e.id && x.studentId===child.id);
+      if(g && g.value!==undefined && g.value!==null) return '<tr><td>'+e.label+'</td><td>'+e.date+'</td><td>'+e.coef+'</td><td class="mono"><b>'+g.value+'</b>/20</td></tr>';
+      if(g && g.justification) return '<tr><td>'+e.label+'</td><td>'+e.date+'</td><td>'+e.coef+'</td><td><span class="tag amber">Justifié</span></td></tr>';
+      return '<tr><td>'+e.label+'</td><td>'+e.date+'</td><td>'+e.coef+'</td><td><span class="tag red">Non noté</span></td></tr>';
+    }).join('')+'</tbody></table></div>';
+  }).join('') || '<div class="panel"><div class="empty">Aucune note enregistrée pour le moment.</div></div>';
+}
+
+function parentCahierBody(child){
+  const entries = db.journal.filter(j=>j.classId===child.classId).slice().reverse();
+  return '<div class="panel">'+
+    (entries.map(j=>{
+      const sub = db.subjects.find(s=>s.id===j.subjectId);
+      return '<div class="entry"><div class="meta"><span>'+j.date+' · '+(sub?sub.name:'')+'</span></div><h4>'+j.contenu+'</h4>'+(j.devoirs?'<p class="devoirs"><b>Devoirs —</b> '+j.devoirs+'</p>':'')+'</div>';
+    }).join('') || '<div class="empty">Aucune entrée pour le moment.</div>')+
+  '</div>';
+}
+
+function parentComportement(child){
+  const entries = db.behavior.filter(b=>b.studentId===child.id).slice().sort((a,b)=>b.date.localeCompare(a.date));
+  return '<div class="panel"><table><thead><tr><th>Date</th><th>Type</th><th>Motif</th><th>Auteur</th><th>Visa</th></tr></thead><tbody>'+
+  (entries.map(b=>'<tr><td class="mono">'+b.date+'</td><td><span class="tag '+(b.type==='positif'?'green':'red')+'">'+(b.type==='positif'?'Positif':'À signaler')+'</span></td><td>'+b.motif+'</td><td>'+b.author+'</td>'+
+    '<td>'+(b.visa?'<span class="visa-pill" style="color:var(--green);">✓ Visé le '+b.visaDate+'</span>':'<button class="btn-xs" onclick="viserBehavior(\''+b.id+'\')">Viser — j\'en prends connaissance</button>')+'</td></tr>').join('') || '<tr><td colspan="5" class="empty">Aucune entrée.</td></tr>')+
+  '</tbody></table></div>';
+}
+function viserBehavior(id){
+  const b = db.behavior.find(x=>x.id===id);
+  b.visa = true; b.visaDate = todayISO();
+  saveData(); renderMain(); showToast('Entrée visée');
+}
+
+/* ============================================================
+   SUPER ADMIN — gestion des écoles partenaires & abonnements
+   ============================================================ */
+function renderSuper(){
+  return schoolsAdmin();
+}
+function schoolsAdmin(){
+  const schools = db.schools;
+  const actifs = schools.filter(s=>s.status==='actif').length;
+  const suspendus = schools.filter(s=>s.status==='suspendu').length;
+  const essai = schools.filter(s=>s.status==='essai').length;
+  return '<div class="page-head"><div><h1>Écoles partenaires</h1><div class="sub">Gérez les accès et abonnements de chaque établissement</div></div></div>'+
+  '<div class="cards-row">'+
+    '<div class="stat-card"><div class="n">'+schools.length+'</div><div class="l">Écoles</div></div>'+
+    '<div class="stat-card"><div class="n" style="color:var(--green);">'+actifs+'</div><div class="l">Abonnements actifs</div></div>'+
+    '<div class="stat-card"><div class="n" style="color:var(--gold-dark);">'+essai+'</div><div class="l">À l\'essai</div></div>'+
+    '<div class="stat-card"><div class="n" style="color:var(--red);">'+suspendus+'</div><div class="l">Accès suspendu</div></div>'+
+  '</div>'+
+  '<div class="panel"><div class="panel-head"><h3>Ajouter une école</h3></div>'+
+  '<div class="form-grid">'+
+    '<div class="f-group"><label>Nom de l\'école</label><input id="sch-name" placeholder="Ex. Collège Sainte-Marie"></div>'+
+    '<div class="f-group"><label>Contact</label><input id="sch-contact" placeholder="email@ecole.ci"></div>'+
+    '<div class="f-group"><label>Plan</label><input id="sch-plan" placeholder="Ex. Standard — 500 élèves"></div>'+
+    '<div class="f-group"><label>Prochaine échéance</label><input id="sch-due" type="date" value="'+todayISO()+'"></div>'+
+    '<button class="btn-sm" onclick="addSchoolTenant()">Ajouter</button>'+
+  '</div></div>'+
+  '<div class="panel"><table><thead><tr><th>École</th><th>Plan</th><th>Statut</th><th>Prochaine échéance</th><th>Dernier paiement</th><th></th></tr></thead><tbody>'+
+  (schools.map(s=>{
+    const lastPay = s.payments.length ? s.payments[s.payments.length-1] : null;
+    const rows = '<tr><td><b>'+s.name+'</b><br><span style="color:var(--gray);font-size:12px;">'+s.contact+'</span></td>'+
+      '<td>'+s.plan+'</td>'+
+      '<td><span class="tag '+(s.status==='actif'?'green':s.status==='essai'?'amber':'red')+'">'+statusLabelSchool(s.status)+'</span></td>'+
+      '<td class="mono">'+s.nextDue+'</td>'+
+      '<td>'+(lastPay? lastPay.amount.toLocaleString('fr-FR')+' F · '+lastPay.date : '—')+'</td>'+
+      '<td style="display:flex;gap:4px;flex-wrap:wrap;">'+
+        (s.status==='suspendu'
+          ? '<button class="btn-xs" onclick="toggleSchoolStatus(\''+s.id+'\',\'actif\')">Réactiver</button>'
+          : '<button class="btn-xs" style="color:var(--red);border-color:var(--red);" onclick="toggleSchoolStatus(\''+s.id+'\',\'suspendu\')">Suspendre</button>')+
+        '<button class="btn-xs" onclick="ui.paySchoolId=(ui.paySchoolId===\''+s.id+'\'?null:\''+s.id+'\'); renderMain();">Paiement</button>'+
+        '<button class="btn-xs" onclick="ui.adminSchoolId=(ui.adminSchoolId===\''+s.id+'\'?null:\''+s.id+'\'); renderMain();">Compte admin</button>'+
+      '</td></tr>';
+    const payForm = ui.paySchoolId===s.id ? '<tr><td colspan="6"><div class="form-grid">'+
+      '<div class="f-group"><label>Montant (F CFA)</label><input id="pay-amount" type="number" placeholder="150000"></div>'+
+      '<div class="f-group"><label>Date</label><input id="pay-date" type="date" value="'+todayISO()+'"></div>'+
+      '<div class="f-group"><label>Note</label><input id="pay-note" placeholder="Ex. Trimestre 2"></div>'+
+      '<div class="f-group"><label>Nouvelle échéance</label><input id="pay-due" type="date" value="'+s.nextDue+'"></div>'+
+      '<button class="btn-sm" onclick="recordPayment(\''+s.id+'\')">Enregistrer — réactive l\'accès</button>'+
+      '</div>'+
+      (s.payments.length ? '<div style="margin-top:12px;"><table><thead><tr><th>Date</th><th>Montant</th><th>Note</th></tr></thead><tbody>'+
+        s.payments.slice().reverse().map(p=>'<tr><td class="mono">'+p.date+'</td><td class="mono">'+p.amount.toLocaleString('fr-FR')+' F</td><td>'+(p.note||'—')+'</td></tr>').join('')+
+        '</tbody></table></div>' : '')+
+      '</td></tr>' : '';
+    const adminForm = ui.adminSchoolId===s.id ? '<tr><td colspan="6"><div class="form-grid">'+
+      '<div class="f-group"><label>Nom du responsable</label><input id="sa-name" placeholder="Ex. M. le Directeur"></div>'+
+      '<div class="f-group"><label>E-mail (connexion)</label><input id="sa-email" placeholder="admin@ecole.ci"></div>'+
+      '<button class="btn-sm" onclick="createSchoolAdmin(\''+s.id+'\')">Créer le compte administration</button>'+
+      '</div></td></tr>' : '';
+    return rows + payForm + adminForm;
+  }).join('') || '<tr><td colspan="6" class="empty">Aucune école enregistrée.</td></tr>')+
+  '</tbody></table></div>';
+}
+function statusLabelSchool(s){ return s==='actif'?'Actif':s==='essai'?'Essai':'Suspendu'; }
+async function createSchoolAdmin(schoolId){
+  const name = document.getElementById('sa-name').value.trim();
+  const email = document.getElementById('sa-email').value.trim();
+  if(!name || !email) return showToast('Renseignez le nom et l\'e-mail');
+  const id = await createSchoolAccount(email, name, 'admin', schoolId);
+  if(!id) return;
+  ui.adminSchoolId = null;
+}
+async function addSchoolTenant(){
+  const name = document.getElementById('sch-name').value.trim();
+  const contact = document.getElementById('sch-contact').value.trim();
+  const plan = document.getElementById('sch-plan').value.trim();
+  const nextDue = document.getElementById('sch-due').value || todayISO();
+  if(!name) return showToast('Indiquez un nom d\'école');
+  const { error } = await sb.from('schools').insert({ name, contact, plan: plan||'Standard', status:'essai', next_due: nextDue });
+  if(error){ showToast('Erreur : '+error.message); return; }
+  showToast('École ajoutée — accès en période d\'essai');
+  await loadData(); renderMain();
+}
+async function toggleSchoolStatus(id, status){
+  const { error } = await sb.from('schools').update({ status }).eq('id', id);
+  if(error){ showToast('Erreur : '+error.message); return; }
+  showToast(status==='suspendu' ? 'Accès suspendu' : 'Accès réactivé');
+  await loadData(); renderMain();
+}
+async function recordPayment(id){
+  const amount = Number(document.getElementById('pay-amount').value);
+  const date = document.getElementById('pay-date').value || todayISO();
+  const note = document.getElementById('pay-note').value.trim();
+  const nextDue = document.getElementById('pay-due').value;
+  if(!amount) return showToast('Indiquez un montant');
+  const { error: e1 } = await sb.from('payments').insert({ school_id:id, amount, pay_date:date, note });
+  const { error: e2 } = await sb.from('schools').update({ status:'actif', next_due: nextDue || undefined }).eq('id', id);
+  if(e1 || e2){ showToast('Erreur lors de l\'enregistrement'); return; }
+  ui.paySchoolId = null;
+  showToast('Paiement enregistré — accès actif');
+  await loadData(); renderMain();
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+(async function init(){
+  const { data: { session: authSession } } = await sb.auth.getSession();
+  if(authSession){
+    await afterLogin();
+  }
+  // Sinon : l'écran de connexion (affiché par défaut dans le HTML) reste visible.
+})();
+</script>
+</body>
+</html>
