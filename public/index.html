@@ -232,7 +232,7 @@ function emptySchoolData(){
 // - Super Admin : la liste des écoles + leurs paiements
 // - Autres rôles : le bloc de données pédagogiques de LEUR école uniquement
 async function loadData(){
-  if(session.role === 'super_admin'){
+  if(session.role === 'super'){
     const { data: schools, error: e1 } = await sb.from('schools').select('*').order('name');
     const { data: payments, error: e2 } = await sb.from('payments').select('*').order('pay_date');
     if(e1 || e2){ showToast('Erreur de chargement des écoles'); db = { schools: [] }; return; }
@@ -254,7 +254,7 @@ async function loadData(){
 // Sauvegarde le bloc de données pédagogiques de l'école courante.
 // (Le Super Admin sauvegarde écoles/paiements via des appels dédiés — voir plus bas.)
 async function saveData(){
-  if(session.role === 'super_admin') return;
+  if(session.role === 'super') return;
   try{
     await sb.from('school_data').upsert({
       school_id: session.schoolId,
