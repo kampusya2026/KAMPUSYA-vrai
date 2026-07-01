@@ -526,21 +526,21 @@ function adminComptes(){
 }
 function setAcctTab(t){ ui.adminAcctTab=t; ui.editProf=null; ui.editStudent=null; ui.editParent=null; renderMain(); }
 
-// Crée un vrai compte de connexion (Supabase Auth) pour un professeur, élève ou parent,
-// via la fonction serverless sécurisée, puis affiche le mot de passe temporaire à
-// transmettre manuellement (WhatsApp, SMS...) à la personne concernée.
+// Crée un vrai compte de connexion (Supabase Auth) pour un admin, professeur, élève
+// ou parent, via la fonction serverless sécurisée, avec le mot de passe choisi par
+// la personne qui crée le compte (visible dans le champ, pas dans un message qui disparaît).
 function generateTempPassword(){
   return Math.random().toString(36).slice(-6) + Math.floor(10+Math.random()*89) + '!';
 }
-async function createSchoolAccount(email, fullName, role, targetSchoolId){
-  const tempPassword = generateTempPassword();
+async function createSchoolAccount(email, fullName, role, targetSchoolId, password){
+  if(!password || password.length < 6){ showToast('Le mot de passe doit contenir au moins 6 caractères'); return null; }
   const { data: { session: authSession } } = await sb.auth.getSession();
   const requesterToken = authSession ? authSession.access_token : null;
   try{
     const res = await fetch('/.netlify/functions/create-account', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password: tempPassword, full_name: fullName, role, school_id: targetSchoolId || session.schoolId, requesterToken })
+      body: JSON.stringify({ email, password, full_name: fullName, role, school_id: targetSchoolId || session.schoolId, requesterToken })
     });
     if(!res.ok){
       const msg = await res.text();
@@ -548,7 +548,7 @@ async function createSchoolAccount(email, fullName, role, targetSchoolId){
       return null;
     }
     const result = await res.json();
-    showToast('Compte créé — mot de passe temporaire : ' + tempPassword + ' (à transmettre à ' + fullName + ')');
+    showToast('Compte créé pour ' + fullName + ' — transmets-lui l\'e-mail et le mot de passe que tu viens de saisir');
     return result.id;
   }catch(e){
     showToast('Erreur réseau — vérifiez que la fonction Netlify est bien déployée');
@@ -556,10 +556,18 @@ async function createSchoolAccount(email, fullName, role, targetSchoolId){
   }
 }
 
+function pwFieldHTML(id){
+  return '<div class="f-group"><label>Mot de passe</label><div style="display:flex;gap:6px;">'+
+    '<input id="'+id+'" type="text" placeholder="Au moins 6 caractères">'+
+    '<button type="button" class="btn-xs" onclick="document.getElementById(\''+id+'\').value=generateTempPassword();">Générer</button>'+
+    '</div></div>';
+}
+
 function comptesProfs(){
   return '<div class="panel"><div class="panel-head"><h3>Nouveau compte professeur</h3></div>'+
   '<div class="form-grid"><div class="f-group"><label>Nom complet</label><input id="pf-name" placeholder="Ex. Mme Aya N\'Guessan"></div>'+
-  '<div class="f-group"><label>Email</label><input id="pf-email" placeholder="email@ecole.ci"></div></div>'+
+  '<div class="f-group"><label>Email</label><input id="pf-email" placeholder="email@ecole.ci"></div>'+
+  pwFieldHTML('pf-password')+'</div>'+
   '<div style="margin-top:12px;"><label class="field-label" style="margin-top:0;">Matières enseignées</label><div class="chips">'+
     (db.subjects.map(s=>'<label class="f-check"><input type="checkbox" class="pf-sub" value="'+s.id+'"> '+s.name+'</label>').join('') || '<span class="empty">Créez d\'abord des matières</span>')+
   '</div></div>'+
@@ -590,11 +598,12 @@ function comptesProfs(){
 async function addProf(){
   const name = document.getElementById('pf-name').value.trim();
   const email = document.getElementById('pf-email').value.trim();
+  const password = document.getElementById('pf-password').value;
   const subjectIds = [...document.querySelectorAll('.pf-sub:checked')].map(c=>c.value);
   const classIds = [...document.querySelectorAll('.pf-cls:checked')].map(c=>c.value);
   if(!name) return showToast('Indiquez un nom');
   if(!email) return showToast('Indiquez un e-mail — il sert à la connexion');
-  const id = await createSchoolAccount(email, name, 'prof');
+  const id = await createSchoolAccount(email, name, 'prof', null, password);
   if(!id) return;
   db.profs.push({id, name, email, subjectIds, classIds});
   saveData(); renderMain();
@@ -613,6 +622,7 @@ function comptesEleves(){
   return '<div class="panel"><div class="panel-head"><h3>Nouvel élève</h3></div>'+
   '<div class="form-grid"><div class="f-group"><label>Nom complet</label><input id="el-name" placeholder="Ex. Kouadio Affoué"></div>'+
   '<div class="f-group"><label>E-mail (connexion)</label><input id="el-email" placeholder="eleve@ecole.ci"></div>'+
+  pwFieldHTML('el-password')+
   '<div class="f-group"><label>Classe</label><select id="el-class">'+(db.classes.map(c=>'<option value="'+c.id+'">'+c.name+'</option>').join('') || '<option disabled>Aucune classe</option>')+'</select></div>'+
   '<button class="btn-sm" onclick="addStudent()">Ajouter</button></div></div>'+
   '<div class="panel"><table><thead><tr><th>Élève</th><th>Classe</th><th>Parent lié</th><th></th></tr></thead><tbody>'+
@@ -634,11 +644,12 @@ function comptesEleves(){
 async function addStudent(){
   const name = document.getElementById('el-name').value.trim();
   const email = document.getElementById('el-email').value.trim();
+  const password = document.getElementById('el-password').value;
   const classId = document.getElementById('el-class').value;
   if(!name) return showToast('Indiquez un nom');
   if(!email) return showToast('Indiquez un e-mail — il sert à la connexion');
   if(!classId) return showToast('Créez d\'abord une classe');
-  const id = await createSchoolAccount(email, name, 'eleve');
+  const id = await createSchoolAccount(email, name, 'eleve', null, password);
   if(!id) return;
   db.students.push({id, name, email, classId});
   saveData(); renderMain();
@@ -654,7 +665,8 @@ function removeStudent(id){ db.students = db.students.filter(s=>s.id!==id); save
 function comptesParents(){
   return '<div class="panel"><div class="panel-head"><h3>Nouveau compte parent</h3></div>'+
   '<div class="form-grid"><div class="f-group"><label>Nom complet</label><input id="pa-name" placeholder="Ex. M. Yao Konan"></div>'+
-  '<div class="f-group"><label>Email</label><input id="pa-email" placeholder="email@gmail.com"></div></div>'+
+  '<div class="f-group"><label>Email</label><input id="pa-email" placeholder="email@gmail.com"></div>'+
+  pwFieldHTML('pa-password')+'</div>'+
   '<div style="margin-top:12px;"><label class="field-label" style="margin-top:0;">Enfant(s) lié(s)</label><div class="chips">'+
   (db.students.map(s=>'<label class="f-check"><input type="checkbox" class="pa-child" value="'+s.id+'"> '+s.name+'</label>').join('') || '<span class="empty">Créez d\'abord des élèves</span>')+
   '</div></div><button class="btn-sm" style="margin-top:14px;" onclick="addParent()">Créer le compte</button></div>'+
@@ -677,10 +689,11 @@ function comptesParents(){
 async function addParent(){
   const name = document.getElementById('pa-name').value.trim();
   const email = document.getElementById('pa-email').value.trim();
+  const password = document.getElementById('pa-password').value;
   const studentIds = [...document.querySelectorAll('.pa-child:checked')].map(c=>c.value);
   if(!name) return showToast('Indiquez un nom');
   if(!email) return showToast('Indiquez un e-mail — il sert à la connexion');
-  const id = await createSchoolAccount(email, name, 'parent');
+  const id = await createSchoolAccount(email, name, 'parent', null, password);
   if(!id) return;
   db.parents.push({id, name, email, studentIds});
   saveData(); renderMain();
@@ -1390,6 +1403,7 @@ function schoolsAdmin(){
     const adminForm = ui.adminSchoolId===s.id ? '<tr><td colspan="6"><div class="form-grid">'+
       '<div class="f-group"><label>Nom du responsable</label><input id="sa-name" placeholder="Ex. M. le Directeur"></div>'+
       '<div class="f-group"><label>E-mail (connexion)</label><input id="sa-email" placeholder="admin@ecole.ci"></div>'+
+      pwFieldHTML('sa-password')+
       '<button class="btn-sm" onclick="createSchoolAdmin(\''+s.id+'\')">Créer le compte administration</button>'+
       '</div></td></tr>' : '';
     return rows + payForm + adminForm;
@@ -1400,8 +1414,9 @@ function statusLabelSchool(s){ return s==='actif'?'Actif':s==='essai'?'Essai':'S
 async function createSchoolAdmin(schoolId){
   const name = document.getElementById('sa-name').value.trim();
   const email = document.getElementById('sa-email').value.trim();
+  const password = document.getElementById('sa-password').value;
   if(!name || !email) return showToast('Renseignez le nom et l\'e-mail');
-  const id = await createSchoolAccount(email, name, 'admin', schoolId);
+  const id = await createSchoolAccount(email, name, 'admin', schoolId, password);
   if(!id) return;
   ui.adminSchoolId = null;
 }
