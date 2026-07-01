@@ -184,10 +184,26 @@ tr:last-child td{border-bottom:none;}
       <div class="tabs" id="tabs"></div>
       <div class="sidebar-footer">
         <div class="who"><b id="who-name">—</b><span id="who-role"></span></div>
+        <button class="logout-btn" onclick="openPwModal()" style="margin-bottom:8px;">Changer mon mot de passe</button>
         <button class="logout-btn" onclick="logout()">Se déconnecter</button>
       </div>
     </div>
     <div class="main" id="main"></div>
+  </div>
+</div>
+
+<div id="pw-modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(27,42,74,0.55);z-index:200;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:14px;padding:26px 26px 22px;width:100%;max-width:380px;margin:16px;">
+    <h3 style="font-size:18px;margin-bottom:4px;">Changer mon mot de passe</h3>
+    <div style="color:var(--gray);font-size:13px;margin-bottom:18px;">Choisis un nouveau mot de passe pour ton compte.</div>
+    <label class="field-label" style="margin-top:0;">Nouveau mot de passe</label>
+    <input class="select-acct" id="pw-new" type="text" placeholder="Au moins 6 caractères">
+    <label class="field-label">Confirmer</label>
+    <input class="select-acct" id="pw-confirm" type="text" placeholder="Retape le même mot de passe">
+    <div style="display:flex;gap:8px;margin-top:18px;">
+      <button class="btn-sm ghost" style="flex:1;" onclick="closePwModal()">Annuler</button>
+      <button class="btn-sm" style="flex:1;" onclick="submitPasswordChange()">Enregistrer</button>
+    </div>
   </div>
 </div>
 
@@ -213,7 +229,8 @@ let ui = { adminTab:'overview', adminAcctTab:'profs', profTab:'appel', eleveTab:
            profClass:null, profSubject:null, parentChild:null, appelDate: todayISO(),
            schedClass:null, presDate: todayISO(), notesAdminClass:null, progClass:null, progSubject:null,
            editProf:null, editStudent:null, editParent:null, comportClass:null,
-           msgScope:'eleves', msgClassId:null, msgRecType:'eleve', msgRecId:null };
+           msgScope:'eleves', msgClassId:null, msgRecType:'eleve', msgRecId:null,
+           editSchoolNameId:null, contactSchoolId:null, contactData:null, contactLoading:false };
 
 function todayISO(){ const d=new Date(); return d.toISOString().slice(0,10); }
 function uid(p){ return p+'_'+Math.random().toString(36).slice(2,9); }
@@ -322,6 +339,25 @@ async function afterLogin(){
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app').style.display='block';
   renderShell();
+}
+
+function openPwModal(){
+  document.getElementById('pw-new').value = '';
+  document.getElementById('pw-confirm').value = '';
+  document.getElementById('pw-modal-overlay').style.display = 'flex';
+}
+function closePwModal(){
+  document.getElementById('pw-modal-overlay').style.display = 'none';
+}
+async function submitPasswordChange(){
+  const pw = document.getElementById('pw-new').value;
+  const confirm = document.getElementById('pw-confirm').value;
+  if(!pw || pw.length < 6){ showToast('Le mot de passe doit contenir au moins 6 caractères'); return; }
+  if(pw !== confirm){ showToast('Les deux mots de passe ne correspondent pas'); return; }
+  const { error } = await sb.auth.updateUser({ password: pw });
+  if(error){ showToast('Erreur : ' + error.message); return; }
+  closePwModal();
+  showToast('Mot de passe mis à jour');
 }
 
 async function logout(){
@@ -1354,12 +1390,22 @@ function viserBehavior(id){
 function renderSuper(){
   return schoolsAdmin();
 }
+const PLANS = {
+  essai:    { label:'Essai',    price:'Gratuit', desc:'Période de découverte' },
+  starter:  { label:'Starter',  price:'75 000 FCFA/mois · 750 000 FCFA/an',   desc:'Moins de 500 étudiants' },
+  standard: { label:'Standard', price:'150 000 FCFA/mois · 1 500 000 FCFA/an', desc:'500 à 2 000 étudiants' },
+  premium:  { label:'Premium',  price:'300 000 FCFA/mois · 3 000 000 FCFA/an', desc:'Plus de 2 000 étudiants' }
+};
+function planSelectHTML(id, current){
+  return '<select id="'+id+'">'+Object.keys(PLANS).map(k=>'<option value="'+k+'" '+(k===current?'selected':'')+'>'+PLANS[k].label+'</option>').join('')+'</select>';
+}
+
 function schoolsAdmin(){
   const schools = db.schools;
   const actifs = schools.filter(s=>s.status==='actif').length;
   const suspendus = schools.filter(s=>s.status==='suspendu').length;
   const essai = schools.filter(s=>s.status==='essai').length;
-  return '<div class="page-head"><div><h1>Écoles partenaires</h1><div class="sub">Gérez les accès et abonnements de chaque établissement</div></div></div>'+
+  return '<div class="page-head"><div><h1>Écoles partenaires</h1><div class="sub">Gérez les accès, abonnements et contacts de chaque établissement</div></div></div>'+
   '<div class="cards-row">'+
     '<div class="stat-card"><div class="n">'+schools.length+'</div><div class="l">Écoles</div></div>'+
     '<div class="stat-card"><div class="n" style="color:var(--green);">'+actifs+'</div><div class="l">Abonnements actifs</div></div>'+
@@ -1370,15 +1416,20 @@ function schoolsAdmin(){
   '<div class="form-grid">'+
     '<div class="f-group"><label>Nom de l\'école</label><input id="sch-name" placeholder="Ex. Collège Sainte-Marie"></div>'+
     '<div class="f-group"><label>Contact</label><input id="sch-contact" placeholder="email@ecole.ci"></div>'+
-    '<div class="f-group"><label>Plan</label><input id="sch-plan" placeholder="Ex. Standard — 500 élèves"></div>'+
+    '<div class="f-group"><label>Formule</label>'+planSelectHTML('sch-plan','essai')+'</div>'+
     '<div class="f-group"><label>Prochaine échéance</label><input id="sch-due" type="date" value="'+todayISO()+'"></div>'+
     '<button class="btn-sm" onclick="addSchoolTenant()">Ajouter</button>'+
   '</div></div>'+
-  '<div class="panel"><table><thead><tr><th>École</th><th>Plan</th><th>Statut</th><th>Prochaine échéance</th><th>Dernier paiement</th><th></th></tr></thead><tbody>'+
+  '<div class="panel"><table><thead><tr><th>École</th><th>Formule</th><th>Statut</th><th>Prochaine échéance</th><th>Dernier paiement</th><th></th></tr></thead><tbody>'+
   (schools.map(s=>{
     const lastPay = s.payments.length ? s.payments[s.payments.length-1] : null;
-    const rows = '<tr><td><b>'+s.name+'</b><br><span style="color:var(--gray);font-size:12px;">'+s.contact+'</span></td>'+
-      '<td>'+s.plan+'</td>'+
+    const plan = PLANS[s.plan] ? s.plan : 'essai';
+    const nameRow = ui.editSchoolNameId===s.id
+      ? '<div style="display:flex;gap:6px;"><input id="sn-name" value="'+s.name+'" style="padding:6px 8px;border:1.5px solid var(--line);border-radius:6px;font-size:13px;"><button class="btn-xs" onclick="saveSchoolName(\''+s.id+'\')">OK</button><button class="btn-xs" onclick="ui.editSchoolNameId=null;renderMain();">✕</button></div>'
+      : '<b>'+s.name+'</b> <button class="edit-btn" onclick="ui.editSchoolNameId=\''+s.id+'\';renderMain();">Modifier</button>';
+    const rows = '<tr><td>'+nameRow+'<br><span style="color:var(--gray);font-size:12px;">'+s.contact+'</span></td>'+
+      '<td>'+planSelectHTML('plan-'+s.id, plan)+'<div style="font-size:11px;color:var(--gray);margin-top:4px;">'+PLANS[plan].price+'</div>'+
+        '<button class="btn-xs" style="margin-top:5px;" onclick="updateSchoolPlan(\''+s.id+'\')">Appliquer</button></td>'+
       '<td><span class="tag '+(s.status==='actif'?'green':s.status==='essai'?'amber':'red')+'">'+statusLabelSchool(s.status)+'</span></td>'+
       '<td class="mono">'+s.nextDue+'</td>'+
       '<td>'+(lastPay? lastPay.amount.toLocaleString('fr-FR')+' F · '+lastPay.date : '—')+'</td>'+
@@ -1388,6 +1439,8 @@ function schoolsAdmin(){
           : '<button class="btn-xs" style="color:var(--red);border-color:var(--red);" onclick="toggleSchoolStatus(\''+s.id+'\',\'suspendu\')">Suspendre</button>')+
         '<button class="btn-xs" onclick="ui.paySchoolId=(ui.paySchoolId===\''+s.id+'\'?null:\''+s.id+'\'); renderMain();">Paiement</button>'+
         '<button class="btn-xs" onclick="ui.adminSchoolId=(ui.adminSchoolId===\''+s.id+'\'?null:\''+s.id+'\'); renderMain();">Compte admin</button>'+
+        '<button class="btn-xs" onclick="openContactPanel(\''+s.id+'\')">Contact admin</button>'+
+        '<button class="btn-xs" style="color:var(--red);border-color:var(--red);" onclick="confirmDeleteSchool(\''+s.id+'\',\''+s.name.replace(/'/g,"\\'")+'\')">Supprimer</button>'+
       '</td></tr>';
     const payForm = ui.paySchoolId===s.id ? '<tr><td colspan="6"><div class="form-grid">'+
       '<div class="f-group"><label>Montant (F CFA)</label><input id="pay-amount" type="number" placeholder="150000"></div>'+
@@ -1406,9 +1459,87 @@ function schoolsAdmin(){
       pwFieldHTML('sa-password')+
       '<button class="btn-sm" onclick="createSchoolAdmin(\''+s.id+'\')">Créer le compte administration</button>'+
       '</div></td></tr>' : '';
-    return rows + payForm + adminForm;
+    const contactForm = ui.contactSchoolId===s.id ? '<tr><td colspan="6">'+contactPanelHTML(s.id)+'</td></tr>' : '';
+    return rows + payForm + adminForm + contactForm;
   }).join('') || '<tr><td colspan="6" class="empty">Aucune école enregistrée.</td></tr>')+
   '</tbody></table></div>';
+}
+function contactPanelHTML(schoolId){
+  if(ui.contactLoading) return '<div class="empty">Chargement du contact...</div>';
+  const c = ui.contactData;
+  if(!c) return '<div class="empty">Aucun compte administrateur trouvé pour cette école. Utilisez "Compte admin" pour en créer un.</div>';
+  return '<div class="form-grid">'+
+    '<div class="f-group"><label>Nom du responsable</label><input id="ca-name" value="'+(c.full_name||'')+'"></div>'+
+    '<div class="f-group"><label>E-mail (connexion)</label><input id="ca-email" value="'+(c.email||'')+'"></div>'+
+    '<button class="btn-sm" onclick="saveAdminContact(\''+c.id+'\')">Enregistrer</button>'+
+    '<button class="btn-sm danger" onclick="deleteAdminContact(\''+c.id+'\',\''+schoolId+'\')">Supprimer ce compte</button>'+
+  '</div>';
+}
+async function openContactPanel(schoolId){
+  if(ui.contactSchoolId === schoolId){ ui.contactSchoolId = null; renderMain(); return; }
+  ui.contactSchoolId = schoolId; ui.contactLoading = true; ui.contactData = null;
+  renderMain();
+  const { data } = await sb.from('profiles').select('id, full_name, email').eq('school_id', schoolId).eq('role','admin').limit(1);
+  ui.contactData = (data && data[0]) ? data[0] : null;
+  ui.contactLoading = false;
+  renderMain();
+}
+async function saveAdminContact(userId){
+  const full_name = document.getElementById('ca-name').value.trim();
+  const email = document.getElementById('ca-email').value.trim();
+  const { data: { session: authSession } } = await sb.auth.getSession();
+  const requesterToken = authSession ? authSession.access_token : null;
+  try{
+    const res = await fetch('/.netlify/functions/manage-account', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ action:'update', userId, email, full_name, requesterToken })
+    });
+    if(!res.ok){ showToast('Erreur : '+await res.text()); return; }
+    showToast('Contact mis à jour');
+    ui.contactSchoolId = null; renderMain();
+  }catch(e){ showToast('Erreur réseau'); }
+}
+async function deleteAdminContact(userId, schoolId){
+  if(!confirm('Supprimer ce compte administrateur ? Cette action est irréversible.')) return;
+  const { data: { session: authSession } } = await sb.auth.getSession();
+  const requesterToken = authSession ? authSession.access_token : null;
+  try{
+    const res = await fetch('/.netlify/functions/manage-account', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ action:'delete', userId, requesterToken })
+    });
+    if(!res.ok){ showToast('Erreur : '+await res.text()); return; }
+    showToast('Compte supprimé');
+    ui.contactSchoolId = null; renderMain();
+  }catch(e){ showToast('Erreur réseau'); }
+}
+async function saveSchoolName(schoolId){
+  const name = document.getElementById('sn-name').value.trim();
+  if(!name) return showToast('Le nom ne peut pas être vide');
+  const { error } = await sb.from('schools').update({ name }).eq('id', schoolId);
+  if(error){ showToast('Erreur : '+error.message); return; }
+  ui.editSchoolNameId = null;
+  await loadData(); renderMain(); showToast('Nom mis à jour');
+}
+async function updateSchoolPlan(schoolId){
+  const plan = document.getElementById('plan-'+schoolId).value;
+  const { error } = await sb.from('schools').update({ plan }).eq('id', schoolId);
+  if(error){ showToast('Erreur : '+error.message); return; }
+  await loadData(); renderMain(); showToast('Formule mise à jour : '+PLANS[plan].label);
+}
+async function confirmDeleteSchool(schoolId, schoolName){
+  if(!confirm('Supprimer définitivement "'+schoolName+'" ? Tous ses comptes (admin, profs, élèves, parents) et toutes ses données seront effacés. Cette action est irréversible.')) return;
+  const { data: { session: authSession } } = await sb.auth.getSession();
+  const requesterToken = authSession ? authSession.access_token : null;
+  try{
+    const res = await fetch('/.netlify/functions/delete-school', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ schoolId, requesterToken })
+    });
+    if(!res.ok){ showToast('Erreur : '+await res.text()); return; }
+    showToast('École supprimée');
+    await loadData(); renderMain();
+  }catch(e){ showToast('Erreur réseau'); }
 }
 function statusLabelSchool(s){ return s==='actif'?'Actif':s==='essai'?'Essai':'Suspendu'; }
 async function createSchoolAdmin(schoolId){
@@ -1423,10 +1554,10 @@ async function createSchoolAdmin(schoolId){
 async function addSchoolTenant(){
   const name = document.getElementById('sch-name').value.trim();
   const contact = document.getElementById('sch-contact').value.trim();
-  const plan = document.getElementById('sch-plan').value.trim();
+  const plan = document.getElementById('sch-plan').value;
   const nextDue = document.getElementById('sch-due').value || todayISO();
   if(!name) return showToast('Indiquez un nom d\'école');
-  const { error } = await sb.from('schools').insert({ name, contact, plan: plan||'Standard', status:'essai', next_due: nextDue });
+  const { error } = await sb.from('schools').insert({ name, contact, plan, status:'essai', next_due: nextDue });
   if(error){ showToast('Erreur : '+error.message); return; }
   showToast('École ajoutée — accès en période d\'essai');
   await loadData(); renderMain();
