@@ -12,7 +12,7 @@ exports.handler = async (event) => {
   }
 
   try {
-    const { action, userId, email, full_name, requesterToken } = JSON.parse(event.body || '{}');
+    const { action, userId, email, full_name, password, requesterToken } = JSON.parse(event.body || '{}');
 
     if (!action || !userId || !requesterToken) {
       return { statusCode: 400, body: 'Champs manquants' };
@@ -30,17 +30,32 @@ exports.handler = async (event) => {
 
     const { data: requesterProfile } = await supabaseAdmin
       .from('profiles')
-      .select('role')
+      .select('role, school_id')
       .eq('id', requesterData.user.id)
       .single();
 
-    if (requesterProfile?.role !== 'super_admin') {
-      return { statusCode: 403, body: 'Action réservée au Super Admin' };
+    const { data: targetProfile } = await supabaseAdmin
+      .from('profiles')
+      .select('role, school_id')
+      .eq('id', userId)
+      .single();
+
+    const isSuperAdmin = requesterProfile?.role === 'super_admin';
+    const isSchoolAdmin = requesterProfile?.role === 'admin'
+      && targetProfile
+      && targetProfile.school_id === requesterProfile.school_id
+      && ['prof', 'eleve', 'parent'].includes(targetProfile.role);
+
+    if (!isSuperAdmin && !isSchoolAdmin) {
+      return { statusCode: 403, body: 'Action réservée au Super Admin ou à l\'administration de l\'école concernée' };
     }
 
     if (action === 'update') {
-      if (email) {
-        const { error: updErr } = await supabaseAdmin.auth.admin.updateUserById(userId, { email });
+      const authUpdates = {};
+      if (email) authUpdates.email = email;
+      if (password) authUpdates.password = password;
+      if (Object.keys(authUpdates).length) {
+        const { error: updErr } = await supabaseAdmin.auth.admin.updateUserById(userId, authUpdates);
         if (updErr) return { statusCode: 400, body: updErr.message };
       }
       const profileUpdates = {};
