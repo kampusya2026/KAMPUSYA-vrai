@@ -474,6 +474,7 @@ function renderAdmin(){
 }
 
 function adminOverview(){
+  const mode = db.school.periodeMode === 'semestre' ? 'semestre' : 'trimestre';
   return '<div class="page-head"><div><h1>Tableau de bord</h1><div class="sub">'+db.school.name+' — Année '+db.school.year+'</div></div></div>'+
   '<div class="cards-row">'+
     '<div class="stat-card"><div class="n">'+db.classes.length+'</div><div class="l">Classes</div></div>'+
@@ -481,12 +482,23 @@ function adminOverview(){
     '<div class="stat-card"><div class="n">'+db.students.length+'</div><div class="l">Élèves</div></div>'+
     '<div class="stat-card"><div class="n">'+db.parents.length+'</div><div class="l">Comptes parents</div></div>'+
   '</div>'+
+  '<div class="panel"><div class="panel-head"><h3>Organisation de l\'année scolaire</h3></div>'+
+  '<div class="sub" style="margin-bottom:10px;">Choisissez comment votre établissement découpe l\'année — cela détermine les périodes proposées lors de la création des évaluations et pour le calcul des moyennes.</div>'+
+  '<div class="chips">'+
+    '<label class="f-check"><input type="radio" name="periode-mode" value="trimestre" '+(mode==='trimestre'?'checked':'')+' onchange="setPeriodeMode(\'trimestre\')"> 3 trimestres</label>'+
+    '<label class="f-check"><input type="radio" name="periode-mode" value="semestre" '+(mode==='semestre'?'checked':'')+' onchange="setPeriodeMode(\'semestre\')"> 2 semestres</label>'+
+  '</div></div>'+
   '<div class="panel"><div class="panel-head"><h3>Activité récente — cahier de texte</h3></div>'+
     (db.journal.slice(-4).reverse().map(j=>{
       const cls = db.classes.find(c=>c.id===j.classId), sub = db.subjects.find(s=>s.id===j.subjectId);
       return '<div class="entry"><div class="meta">'+j.date+' · '+(cls?cls.name:'')+' · '+(sub?sub.name:'')+'</div><h4>'+j.contenu+'</h4>'+(j.devoirs?'<p class="devoirs"><b>Devoirs —</b> '+j.devoirs+'</p>':'')+'</div>';
     }).join('') || '<div class="empty">Aucune entrée pour le moment.</div>')+
   '</div>';
+}
+function setPeriodeMode(mode){
+  db.school.periodeMode = mode;
+  saveData(); renderMain();
+  showToast('Découpage de l\'année : '+(mode==='semestre'?'2 semestres':'3 trimestres'));
 }
 
 function adminClasses(){
@@ -645,6 +657,33 @@ function pwFieldHTML(id){
     '</div></div>';
 }
 
+// Synchronise l'e-mail, le nom et/ou le mot de passe d'un compte existant
+// vers Supabase Auth (utilisé lors de la modification d'un compte).
+async function syncAccountToAuth(userId, {email, full_name, password}){
+  const { data: { session: authSession } } = await sb.auth.getSession();
+  const requesterToken = authSession ? authSession.access_token : null;
+  try{
+    const res = await fetch('/.netlify/functions/manage-account', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ action:'update', userId, email, full_name, password, requesterToken })
+    });
+    if(!res.ok){ showToast('Erreur : '+await res.text()); return false; }
+    return true;
+  }catch(e){ showToast('Erreur réseau'); return false; }
+}
+async function deleteAuthAccount(userId){
+  const { data: { session: authSession } } = await sb.auth.getSession();
+  const requesterToken = authSession ? authSession.access_token : null;
+  try{
+    const res = await fetch('/.netlify/functions/manage-account', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ action:'delete', userId, requesterToken })
+    });
+    if(!res.ok){ showToast('Erreur : '+await res.text()); return false; }
+    return true;
+  }catch(e){ showToast('Erreur réseau'); return false; }
+}
+
 function comptesProfs(){
   return '<div class="panel"><div class="panel-head"><h3>Nouveau compte professeur</h3></div>'+
   '<div class="form-grid"><div class="f-group"><label>Nom complet</label><input id="pf-name" placeholder="Ex. Mme Aya N\'Guessan"></div>'+
@@ -662,7 +701,9 @@ function comptesProfs(){
     if(ui.editProf===p.id){
       return '<tr><td colspan="5"><div class="form-grid">'+
         '<div class="f-group"><label>Nom</label><input id="ep-name" value="'+p.name+'"></div>'+
-        '<div class="f-group"><label>Email</label><input id="ep-email" value="'+p.email+'"></div></div>'+
+        '<div class="f-group"><label>Email</label><input id="ep-email" value="'+p.email+'"></div>'+
+        pwFieldHTML('ep-password')+'</div>'+
+        '<div style="font-size:12px;color:var(--gray);margin-top:-6px;margin-bottom:6px;">Laisser le mot de passe vide pour ne pas le changer — remplir pour le réinitialiser (à transmettre à la personne).</div>'+
         '<div style="margin-top:10px;"><label class="field-label" style="margin-top:0;">Matières</label><div class="chips">'+
         db.subjects.map(s=>'<label class="f-check"><input type="checkbox" class="ep-sub" value="'+s.id+'" '+(p.subjectIds.includes(s.id)?'checked':'')+'> '+s.name+'</label>').join('')+'</div></div>'+
         '<div style="margin-top:6px;"><label class="field-label">Classes</label><div class="chips">'+
@@ -690,15 +731,26 @@ async function addProf(){
   db.profs.push({id, name, email, subjectIds, classIds});
   saveData(); renderMain();
 }
-function saveProf(id){
+async function saveProf(id){
   const p = db.profs.find(x=>x.id===id);
-  p.name = document.getElementById('ep-name').value.trim() || p.name;
-  p.email = document.getElementById('ep-email').value.trim();
+  const newName = document.getElementById('ep-name').value.trim() || p.name;
+  const newEmail = document.getElementById('ep-email').value.trim();
+  const newPassword = document.getElementById('ep-password').value;
+  const emailChanged = newEmail && newEmail !== p.email;
+  if(emailChanged || newPassword){
+    const ok = await syncAccountToAuth(id, { email: emailChanged?newEmail:undefined, full_name:newName, password:newPassword||undefined });
+    if(!ok) return;
+  }
+  p.name = newName; p.email = newEmail || p.email;
   p.subjectIds = [...document.querySelectorAll('.ep-sub:checked')].map(c=>c.value);
   p.classIds = [...document.querySelectorAll('.ep-cls:checked')].map(c=>c.value);
-  ui.editProf = null; saveData(); renderMain(); showToast('Compte mis à jour');
+  ui.editProf = null; saveData(); renderMain();
+  showToast(newPassword ? 'Compte mis à jour — nouveau mot de passe à transmettre' : 'Compte mis à jour');
 }
-function removeProf(id){ db.profs = db.profs.filter(p=>p.id!==id); saveData(); renderMain(); }
+async function removeProf(id){
+  await deleteAuthAccount(id);
+  db.profs = db.profs.filter(p=>p.id!==id); saveData(); renderMain();
+}
 
 function comptesEleves(){
   const selCount = ui.selectedStudents.length;
@@ -720,9 +772,12 @@ function comptesEleves(){
     if(ui.editStudent===s.id){
       return '<tr><td colspan="5"><div class="form-grid">'+
         '<div class="f-group"><label>Nom</label><input id="es-name" value="'+s.name+'"></div>'+
+        '<div class="f-group"><label>E-mail</label><input id="es-email" value="'+(s.email||'')+'"></div>'+
         '<div class="f-group"><label>Classe</label><select id="es-class">'+db.classes.map(c=>'<option value="'+c.id+'" '+(c.id===s.classId?'selected':'')+'>'+c.name+'</option>').join('')+'</select></div>'+
+        pwFieldHTML('es-password')+'</div>'+
+        '<div style="font-size:12px;color:var(--gray);margin-top:-6px;margin-bottom:6px;">Laisser le mot de passe vide pour ne pas le changer.</div>'+
         '<div style="display:flex;gap:8px;"><button class="btn-sm" onclick="saveStudent(\''+s.id+'\')">Enregistrer</button><button class="btn-sm ghost" onclick="ui.editStudent=null;renderMain();">Annuler</button></div>'+
-        '</div></td></tr>';
+        '</td></tr>';
     }
     const cls = db.classes.find(c=>c.id===s.classId);
     return '<tr><td><input type="checkbox" class="stu-check" '+(ui.selectedStudents.includes(s.id)?'checked':'')+' onchange="toggleStudentSelect(\''+s.id+'\')"></td><td><b>'+s.name+'</b></td><td>'+(cls?cls.name:'—')+'</td><td>'+(par?par.name:'<span style="color:var(--gray)">non lié</span>')+'</td>'+
@@ -743,13 +798,25 @@ async function addStudent(){
   db.students.push({id, name, email, classId});
   saveData(); renderMain();
 }
-function saveStudent(id){
+async function saveStudent(id){
   const s = db.students.find(x=>x.id===id);
-  s.name = document.getElementById('es-name').value.trim() || s.name;
+  const newName = document.getElementById('es-name').value.trim() || s.name;
+  const newEmail = document.getElementById('es-email').value.trim();
+  const newPassword = document.getElementById('es-password').value;
+  const emailChanged = newEmail && newEmail !== s.email;
+  if(emailChanged || newPassword){
+    const ok = await syncAccountToAuth(id, { email: emailChanged?newEmail:undefined, full_name:newName, password:newPassword||undefined });
+    if(!ok) return;
+  }
+  s.name = newName; s.email = newEmail || s.email;
   s.classId = document.getElementById('es-class').value;
-  ui.editStudent = null; saveData(); renderMain(); showToast('Fiche élève mise à jour');
+  ui.editStudent = null; saveData(); renderMain();
+  showToast(newPassword ? 'Fiche mise à jour — nouveau mot de passe à transmettre' : 'Fiche élève mise à jour');
 }
-function removeStudent(id){ db.students = db.students.filter(s=>s.id!==id); ui.selectedStudents = ui.selectedStudents.filter(x=>x!==id); saveData(); renderMain(); }
+async function removeStudent(id){
+  await deleteAuthAccount(id);
+  db.students = db.students.filter(s=>s.id!==id); ui.selectedStudents = ui.selectedStudents.filter(x=>x!==id); saveData(); renderMain();
+}
 function toggleStudentSelect(id){
   if(ui.selectedStudents.includes(id)) ui.selectedStudents = ui.selectedStudents.filter(x=>x!==id);
   else ui.selectedStudents.push(id);
@@ -782,7 +849,9 @@ function comptesParents(){
     if(ui.editParent===p.id){
       return '<tr><td colspan="4"><div class="form-grid">'+
         '<div class="f-group"><label>Nom</label><input id="epa-name" value="'+p.name+'"></div>'+
-        '<div class="f-group"><label>Email</label><input id="epa-email" value="'+p.email+'"></div></div>'+
+        '<div class="f-group"><label>Email</label><input id="epa-email" value="'+p.email+'"></div>'+
+        pwFieldHTML('epa-password')+'</div>'+
+        '<div style="font-size:12px;color:var(--gray);margin-top:-6px;margin-bottom:6px;">Laisser le mot de passe vide pour ne pas le changer.</div>'+
         '<div style="margin-top:10px;"><label class="field-label" style="margin-top:0;">Enfants</label><div class="chips">'+
         db.students.map(s=>'<label class="f-check"><input type="checkbox" class="epa-child" value="'+s.id+'" '+(p.studentIds.includes(s.id)?'checked':'')+'> '+s.name+'</label>').join('')+'</div></div>'+
         '<div style="margin-top:12px;display:flex;gap:8px;"><button class="btn-sm" onclick="saveParent(\''+p.id+'\')">Enregistrer</button><button class="btn-sm ghost" onclick="ui.editParent=null;renderMain();">Annuler</button></div>'+
@@ -805,14 +874,25 @@ async function addParent(){
   db.parents.push({id, name, email, studentIds});
   saveData(); renderMain();
 }
-function saveParent(id){
+async function saveParent(id){
   const p = db.parents.find(x=>x.id===id);
-  p.name = document.getElementById('epa-name').value.trim() || p.name;
-  p.email = document.getElementById('epa-email').value.trim();
+  const newName = document.getElementById('epa-name').value.trim() || p.name;
+  const newEmail = document.getElementById('epa-email').value.trim();
+  const newPassword = document.getElementById('epa-password').value;
+  const emailChanged = newEmail && newEmail !== p.email;
+  if(emailChanged || newPassword){
+    const ok = await syncAccountToAuth(id, { email: emailChanged?newEmail:undefined, full_name:newName, password:newPassword||undefined });
+    if(!ok) return;
+  }
+  p.name = newName; p.email = newEmail || p.email;
   p.studentIds = [...document.querySelectorAll('.epa-child:checked')].map(c=>c.value);
-  ui.editParent = null; saveData(); renderMain(); showToast('Compte mis à jour');
+  ui.editParent = null; saveData(); renderMain();
+  showToast(newPassword ? 'Compte mis à jour — nouveau mot de passe à transmettre' : 'Compte mis à jour');
 }
-function removeParent(id){ db.parents = db.parents.filter(p=>p.id!==id); saveData(); renderMain(); }
+async function removeParent(id){
+  await deleteAuthAccount(id);
+  db.parents = db.parents.filter(p=>p.id!==id); saveData(); renderMain();
+}
 
 /* ---------- ADMIN: PRESENCES (compte rendu journalier) ---------- */
 function adminPresences(){
@@ -849,7 +929,7 @@ function adminNotes(){
   '</select>'+
   '<select onchange="ui.notesAdminPeriode=this.value; renderMain();">'+
     '<option value="Toutes" '+(ui.notesAdminPeriode==='Toutes'?'selected':'')+'>Toute l\'année</option>'+
-    PERIODES.map(p=>'<option value="'+p+'" '+(ui.notesAdminPeriode===p?'selected':'')+'>'+p+'</option>').join('')+
+    getPeriodes().map(p=>'<option value="'+p+'" '+(ui.notesAdminPeriode===p?'selected':'')+'>'+p+'</option>').join('')+
   '</select></div>'+
   '<div class="panel" style="overflow-x:auto;"><table><thead><tr><th>Élève</th>'+
     db.subjects.map(s=>'<th>'+s.name+'</th>').join('')+'<th>Moyenne générale</th></tr></thead><tbody>'+
@@ -1127,7 +1207,10 @@ function setAttendance(studentId, status){
   saveData(); renderMain();
 }
 
-const PERIODES = ['Trimestre 1','Trimestre 2','Trimestre 3'];
+function getPeriodes(){
+  const mode = db.school && db.school.periodeMode === 'semestre' ? 'semestre' : 'trimestre';
+  return mode==='semestre' ? ['Semestre 1','Semestre 2'] : ['Trimestre 1','Trimestre 2','Trimestre 3'];
+}
 function profNotes(){
   const students = db.students.filter(s=>s.classId===ui.profClass);
   const evals = db.evals.filter(e=>e.classId===ui.profClass && e.subjectId===ui.profSubject);
@@ -1135,7 +1218,7 @@ function profNotes(){
   '<div class="form-grid"><div class="f-group"><label>Intitulé</label><input id="ev-label" placeholder="Ex. Devoir surveillé 1"></div>'+
   '<div class="f-group"><label>Date</label><input id="ev-date" type="date" value="'+todayISO()+'"></div>'+
   '<div class="f-group"><label>Coefficient</label><input id="ev-coef" type="number" min="1" value="1" style="width:80px;"></div>'+
-  '<div class="f-group"><label>Période</label><select id="ev-periode">'+PERIODES.map(p=>'<option value="'+p+'">'+p+'</option>').join('')+'</select></div>'+
+  '<div class="f-group"><label>Période</label><select id="ev-periode">'+getPeriodes().map(p=>'<option value="'+p+'">'+p+'</option>').join('')+'</select></div>'+
   '<button class="btn-sm" onclick="addEval()">Créer</button></div></div>'+
   '<div class="panel" style="overflow-x:auto;"><div class="panel-head"><h3>Saisie des notes</h3></div>'+
   (evals.length===0 ? '<div class="empty">Créez une évaluation pour commencer la saisie.</div>' :
@@ -1561,9 +1644,11 @@ function contactPanelHTML(schoolId){
   return '<div class="form-grid">'+
     '<div class="f-group"><label>Nom du responsable</label><input id="ca-name" value="'+(c.full_name||'')+'"></div>'+
     '<div class="f-group"><label>E-mail (connexion)</label><input id="ca-email" value="'+(c.email||'')+'"></div>'+
+    pwFieldHTML('ca-password')+
     '<button class="btn-sm" onclick="saveAdminContact(\''+c.id+'\')">Enregistrer</button>'+
     '<button class="btn-sm danger" onclick="deleteAdminContact(\''+c.id+'\',\''+schoolId+'\')">Supprimer ce compte</button>'+
-  '</div>';
+  '</div>'+
+  '<div style="font-size:12px;color:var(--gray);margin-top:6px;">Laisser le mot de passe vide pour ne pas le changer — remplir pour le réinitialiser.</div>';
 }
 async function openContactPanel(schoolId){
   if(ui.contactSchoolId === schoolId){ ui.contactSchoolId = null; renderMain(); return; }
@@ -1577,15 +1662,16 @@ async function openContactPanel(schoolId){
 async function saveAdminContact(userId){
   const full_name = document.getElementById('ca-name').value.trim();
   const email = document.getElementById('ca-email').value.trim();
+  const password = document.getElementById('ca-password').value;
   const { data: { session: authSession } } = await sb.auth.getSession();
   const requesterToken = authSession ? authSession.access_token : null;
   try{
     const res = await fetch('/.netlify/functions/manage-account', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ action:'update', userId, email, full_name, requesterToken })
+      body: JSON.stringify({ action:'update', userId, email, full_name, password: password||undefined, requesterToken })
     });
     if(!res.ok){ showToast('Erreur : '+await res.text()); return; }
-    showToast('Contact mis à jour');
+    showToast(password ? 'Contact mis à jour — nouveau mot de passe à transmettre' : 'Contact mis à jour');
     ui.contactSchoolId = null; renderMain();
   }catch(e){ showToast('Erreur réseau'); }
 }
@@ -1613,9 +1699,10 @@ async function saveSchoolName(schoolId){
 }
 async function updateSchoolPlan(schoolId){
   const plan = document.getElementById('plan-'+schoolId).value;
-  const { error } = await sb.from('schools').update({ plan }).eq('id', schoolId);
+  const status = plan==='essai' ? 'essai' : 'actif';
+  const { error } = await sb.from('schools').update({ plan, status }).eq('id', schoolId);
   if(error){ showToast('Erreur : '+error.message); return; }
-  await loadData(); renderMain(); showToast('Formule mise à jour : '+PLANS[plan].label);
+  await loadData(); renderMain(); showToast('Formule mise à jour : '+PLANS[plan].label+' — statut : '+statusLabelSchool(status));
 }
 async function confirmDeleteSchool(schoolId, schoolName){
   if(!confirm('Supprimer définitivement "'+schoolName+'" ? Tous ses comptes (admin, profs, élèves, parents) et toutes ses données seront effacés. Cette action est irréversible.')) return;
