@@ -266,7 +266,7 @@ async function loadData(){
   const { data: school } = await sb.from('schools').select('*').eq('id', session.schoolId).single();
   const { data: row } = await sb.from('school_data').select('data').eq('school_id', session.schoolId).maybeSingle();
   db = (row && row.data && Object.keys(row.data).length) ? row.data : emptySchoolData();
-  db.school = { id: session.schoolId, name: school ? school.name : '', year: school ? school.year : '' };
+  db.school = { ...db.school, id: session.schoolId, name: school ? school.name : '', year: school ? school.year : '' };
   if(!db.evals) db.evals=[]; if(!db.schedule) db.schedule=[]; if(!db.events) db.events=[];
   if(!db.messages) db.messages=[]; if(!db.behavior) db.behavior=[]; if(!db.programme) db.programme=[];
 }
