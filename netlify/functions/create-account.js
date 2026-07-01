@@ -71,6 +71,7 @@ exports.handler = async (event) => {
       school_id: role === 'super_admin' ? null : school_id,
       role,
       full_name: full_name || '',
+      email,
     });
     if (profileError) {
       // Nettoyage si la création du profil échoue
