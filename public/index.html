@@ -196,7 +196,9 @@ tr:last-child td{border-bottom:none;}
   <div style="background:#fff;border-radius:14px;padding:26px 26px 22px;width:100%;max-width:380px;margin:16px;">
     <h3 style="font-size:18px;margin-bottom:4px;">Changer mon mot de passe</h3>
     <div style="color:var(--gray);font-size:13px;margin-bottom:18px;">Choisis un nouveau mot de passe pour ton compte.</div>
-    <label class="field-label" style="margin-top:0;">Nouveau mot de passe</label>
+    <label class="field-label" style="margin-top:0;">Mot de passe actuel</label>
+    <input class="select-acct" id="pw-old" type="text" placeholder="Ton mot de passe actuel">
+    <label class="field-label">Nouveau mot de passe</label>
     <input class="select-acct" id="pw-new" type="text" placeholder="Au moins 6 caractères">
     <label class="field-label">Confirmer</label>
     <input class="select-acct" id="pw-confirm" type="text" placeholder="Retape le même mot de passe">
@@ -230,7 +232,8 @@ let ui = { adminTab:'overview', adminAcctTab:'profs', profTab:'appel', eleveTab:
            schedClass:null, presDate: todayISO(), notesAdminClass:null, progClass:null, progSubject:null,
            editProf:null, editStudent:null, editParent:null, comportClass:null,
            msgScope:'eleves', msgClassId:null, msgRecType:'eleve', msgRecId:null,
-           editSchoolNameId:null, contactSchoolId:null, contactData:null, contactLoading:false };
+           editSchoolNameId:null, contactSchoolId:null, contactData:null, contactLoading:false,
+           editClassId:null, editSubjectId:null, selectedStudents:[] };
 
 function todayISO(){ const d=new Date(); return d.toISOString().slice(0,10); }
 function uid(p){ return p+'_'+Math.random().toString(36).slice(2,9); }
@@ -342,6 +345,7 @@ async function afterLogin(){
 }
 
 function openPwModal(){
+  document.getElementById('pw-old').value = '';
   document.getElementById('pw-new').value = '';
   document.getElementById('pw-confirm').value = '';
   document.getElementById('pw-modal-overlay').style.display = 'flex';
@@ -350,10 +354,17 @@ function closePwModal(){
   document.getElementById('pw-modal-overlay').style.display = 'none';
 }
 async function submitPasswordChange(){
+  const oldPw = document.getElementById('pw-old').value;
   const pw = document.getElementById('pw-new').value;
   const confirm = document.getElementById('pw-confirm').value;
-  if(!pw || pw.length < 6){ showToast('Le mot de passe doit contenir au moins 6 caractères'); return; }
+  if(!oldPw){ showToast('Indique ton mot de passe actuel'); return; }
+  if(!pw || pw.length < 6){ showToast('Le nouveau mot de passe doit contenir au moins 6 caractères'); return; }
   if(pw !== confirm){ showToast('Les deux mots de passe ne correspondent pas'); return; }
+  const { data: { user } } = await sb.auth.getUser();
+  if(!user || !user.email){ showToast('Session invalide, reconnecte-toi'); return; }
+  // Vérifie l'ancien mot de passe en tentant une connexion avec
+  const { error: verifyError } = await sb.auth.signInWithPassword({ email: user.email, password: oldPw });
+  if(verifyError){ showToast('Mot de passe actuel incorrect'); return; }
   const { error } = await sb.auth.updateUser({ password: pw });
   if(error){ showToast('Erreur : ' + error.message); return; }
   closePwModal();
@@ -485,8 +496,17 @@ function adminClasses(){
   '<div class="f-group"><label>Niveau</label><input id="cls-level" placeholder="Ex. Collège"></div>'+
   '<button class="btn-sm" onclick="addClass()">Ajouter</button></div></div>'+
   '<div class="panel"><table><thead><tr><th>Classe</th><th>Niveau</th><th>Élèves</th><th></th></tr></thead><tbody>'+
-  (db.classes.map(c=>'<tr><td><b>'+c.name+'</b></td><td>'+c.level+'</td><td>'+db.students.filter(s=>s.classId===c.id).length+'</td>'+
-    '<td><button class="del-btn" onclick="removeClass(\''+c.id+'\')">Supprimer</button></td></tr>').join('') || '<tr><td colspan="4" class="empty">Aucune classe.</td></tr>')+
+  (db.classes.map(c=>{
+    if(ui.editClassId===c.id){
+      return '<tr><td colspan="4"><div class="form-grid">'+
+        '<div class="f-group"><label>Nom</label><input id="ecls-name" value="'+c.name+'"></div>'+
+        '<div class="f-group"><label>Niveau</label><input id="ecls-level" value="'+c.level+'"></div>'+
+        '<div style="display:flex;gap:8px;"><button class="btn-sm" onclick="saveClass(\''+c.id+'\')">Enregistrer</button><button class="btn-sm ghost" onclick="ui.editClassId=null;renderMain();">Annuler</button></div>'+
+        '</div></td></tr>';
+    }
+    return '<tr><td><b>'+c.name+'</b></td><td>'+c.level+'</td><td>'+db.students.filter(s=>s.classId===c.id).length+'</td>'+
+    '<td><button class="edit-btn" onclick="ui.editClassId=\''+c.id+'\';renderMain();">Modifier</button><button class="del-btn" onclick="removeClass(\''+c.id+'\')">Supprimer</button></td></tr>';
+  }).join('') || '<tr><td colspan="4" class="empty">Aucune classe.</td></tr>')+
   '</tbody></table></div>';
 }
 function addClass(){
@@ -496,6 +516,12 @@ function addClass(){
   db.classes.push({id:uid('c'), name, level: level||'—'});
   saveData(); renderMain(); showToast('Classe ajoutée');
 }
+function saveClass(id){
+  const c = db.classes.find(x=>x.id===id);
+  c.name = document.getElementById('ecls-name').value.trim() || c.name;
+  c.level = document.getElementById('ecls-level').value.trim() || c.level;
+  ui.editClassId = null; saveData(); renderMain(); showToast('Classe mise à jour');
+}
 function removeClass(id){ db.classes = db.classes.filter(c=>c.id!==id); saveData(); renderMain(); }
 
 function adminSubjects(){
@@ -504,7 +530,15 @@ function adminSubjects(){
   '<div class="form-grid"><div class="f-group"><label>Nom de la matière</label><input id="sub-name" placeholder="Ex. Histoire-Géographie"></div>'+
   '<button class="btn-sm" onclick="addSubject()">Ajouter</button></div></div>'+
   '<div class="panel"><table><thead><tr><th>Matière</th><th></th></tr></thead><tbody>'+
-  (db.subjects.map(s=>'<tr><td><b>'+s.name+'</b></td><td><button class="del-btn" onclick="removeSubject(\''+s.id+'\')">Supprimer</button></td></tr>').join('') || '<tr><td colspan="2" class="empty">Aucune matière.</td></tr>')+
+  (db.subjects.map(s=>{
+    if(ui.editSubjectId===s.id){
+      return '<tr><td colspan="2"><div style="display:flex;gap:8px;align-items:center;">'+
+        '<input id="esub-name" value="'+s.name+'" style="flex:1;padding:9px 11px;border:1.5px solid var(--line);border-radius:8px;font-size:13.5px;">'+
+        '<button class="btn-sm" onclick="saveSubject(\''+s.id+'\')">Enregistrer</button><button class="btn-sm ghost" onclick="ui.editSubjectId=null;renderMain();">Annuler</button>'+
+        '</div></td></tr>';
+    }
+    return '<tr><td><b>'+s.name+'</b></td><td><button class="edit-btn" onclick="ui.editSubjectId=\''+s.id+'\';renderMain();">Modifier</button><button class="del-btn" onclick="removeSubject(\''+s.id+'\')">Supprimer</button></td></tr>';
+  }).join('') || '<tr><td colspan="2" class="empty">Aucune matière.</td></tr>')+
   '</tbody></table></div>';
 }
 function addSubject(){
@@ -512,6 +546,11 @@ function addSubject(){
   if(!name) return showToast('Indiquez un nom de matière');
   db.subjects.push({id:uid('s'), name});
   saveData(); renderMain(); showToast('Matière ajoutée');
+}
+function saveSubject(id){
+  const s = db.subjects.find(x=>x.id===id);
+  s.name = document.getElementById('esub-name').value.trim() || s.name;
+  ui.editSubjectId = null; saveData(); renderMain(); showToast('Matière mise à jour');
 }
 function removeSubject(id){ db.subjects = db.subjects.filter(s=>s.id!==id); saveData(); renderMain(); }
 /* ---------- ADMIN: EMPLOIS DU TEMPS ---------- */
@@ -527,7 +566,7 @@ function adminSchedule(){
     '<div class="f-group"><label>Jour</label><select id="sc-day">'+DAYS.map((d,i)=>'<option value="'+i+'">'+d+'</option>').join('')+'</select></div>'+
     '<div class="f-group"><label>Début</label><input id="sc-start" type="time" value="08:00"></div>'+
     '<div class="f-group"><label>Fin</label><input id="sc-end" type="time" value="09:00"></div>'+
-    '<div class="f-group"><label>Matière</label><select id="sc-subject">'+db.subjects.map(s=>'<option value="'+s.id+'">'+s.name+'</option>').join('')+'</select></div>'+
+    '<div class="f-group"><label>Matière</label><select id="sc-subject" onchange="syncScheduleProf()">'+db.subjects.map(s=>'<option value="'+s.id+'">'+s.name+'</option>').join('')+'</select></div>'+
     '<div class="f-group"><label>Professeur</label><select id="sc-prof">'+db.profs.map(p=>'<option value="'+p.id+'">'+p.name+'</option>').join('')+'</select></div>'+
     '<button class="btn-sm" onclick="addSlot()">Publier</button>'+
   '</div></div>'+
@@ -539,6 +578,13 @@ function adminSchedule(){
       return '<div class="slot"><button class="rm" onclick="removeSlot(\''+s.id+'\')">&times;</button><span class="t">'+s.start+'–'+s.end+'</span><b>'+(sub?sub.name:'')+'</b>'+(prof?prof.name:'')+'</div>';
     }).join('') || '<div style="font-size:11.5px;color:var(--gray);">—</div>')+'</div>';
   }).join('')+'</div></div>';
+}
+function syncScheduleProf(){
+  const subjEl = document.getElementById('sc-subject');
+  const profEl = document.getElementById('sc-prof');
+  if(!subjEl || !profEl) return;
+  const match = db.profs.find(p=>p.subjectIds.includes(subjEl.value));
+  if(match) profEl.value = match.id;
 }
 function addSlot(){
   const day = Number(document.getElementById('sc-day').value);
@@ -655,26 +701,33 @@ function saveProf(id){
 function removeProf(id){ db.profs = db.profs.filter(p=>p.id!==id); saveData(); renderMain(); }
 
 function comptesEleves(){
+  const selCount = ui.selectedStudents.length;
   return '<div class="panel"><div class="panel-head"><h3>Nouvel élève</h3></div>'+
   '<div class="form-grid"><div class="f-group"><label>Nom complet</label><input id="el-name" placeholder="Ex. Kouadio Affoué"></div>'+
   '<div class="f-group"><label>E-mail (connexion)</label><input id="el-email" placeholder="eleve@ecole.ci"></div>'+
   pwFieldHTML('el-password')+
   '<div class="f-group"><label>Classe</label><select id="el-class">'+(db.classes.map(c=>'<option value="'+c.id+'">'+c.name+'</option>').join('') || '<option disabled>Aucune classe</option>')+'</select></div>'+
   '<button class="btn-sm" onclick="addStudent()">Ajouter</button></div></div>'+
-  '<div class="panel"><table><thead><tr><th>Élève</th><th>Classe</th><th>Parent lié</th><th></th></tr></thead><tbody>'+
+  (selCount>0 ? '<div class="panel" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--amber-bg);border-color:var(--gold);">'+
+    '<b>'+selCount+' élève'+(selCount>1?'s':'')+' sélectionné'+(selCount>1?'s':'')+'</b>'+
+    '<select id="promote-class">'+db.classes.map(c=>'<option value="'+c.id+'">'+c.name+'</option>').join('')+'</select>'+
+    '<button class="btn-sm" onclick="promoteSelectedStudents()">Faire passer en classe supérieure</button>'+
+    '<button class="btn-sm ghost" onclick="ui.selectedStudents=[];renderMain();">Annuler la sélection</button>'+
+    '</div>' : '')+
+  '<div class="panel"><table><thead><tr><th><input type="checkbox" onchange="toggleSelectAllStudents(this.checked)" '+(selCount>0 && selCount===db.students.length?'checked':'')+'></th><th>Élève</th><th>Classe</th><th>Parent lié</th><th></th></tr></thead><tbody>'+
   (db.students.map(s=>{
     const par = db.parents.find(p=>p.studentIds.includes(s.id));
     if(ui.editStudent===s.id){
-      return '<tr><td colspan="4"><div class="form-grid">'+
+      return '<tr><td colspan="5"><div class="form-grid">'+
         '<div class="f-group"><label>Nom</label><input id="es-name" value="'+s.name+'"></div>'+
         '<div class="f-group"><label>Classe</label><select id="es-class">'+db.classes.map(c=>'<option value="'+c.id+'" '+(c.id===s.classId?'selected':'')+'>'+c.name+'</option>').join('')+'</select></div>'+
         '<div style="display:flex;gap:8px;"><button class="btn-sm" onclick="saveStudent(\''+s.id+'\')">Enregistrer</button><button class="btn-sm ghost" onclick="ui.editStudent=null;renderMain();">Annuler</button></div>'+
         '</div></td></tr>';
     }
     const cls = db.classes.find(c=>c.id===s.classId);
-    return '<tr><td><b>'+s.name+'</b></td><td>'+(cls?cls.name:'—')+'</td><td>'+(par?par.name:'<span style="color:var(--gray)">non lié</span>')+'</td>'+
+    return '<tr><td><input type="checkbox" class="stu-check" '+(ui.selectedStudents.includes(s.id)?'checked':'')+' onchange="toggleStudentSelect(\''+s.id+'\')"></td><td><b>'+s.name+'</b></td><td>'+(cls?cls.name:'—')+'</td><td>'+(par?par.name:'<span style="color:var(--gray)">non lié</span>')+'</td>'+
     '<td><button class="edit-btn" onclick="ui.editStudent=\''+s.id+'\';renderMain();">Modifier</button><button class="del-btn" onclick="removeStudent(\''+s.id+'\')">Supprimer</button></td></tr>';
-  }).join('') || '<tr><td colspan="4" class="empty">Aucun élève.</td></tr>')+
+  }).join('') || '<tr><td colspan="5" class="empty">Aucun élève.</td></tr>')+
   '</tbody></table></div>';
 }
 async function addStudent(){
@@ -696,7 +749,25 @@ function saveStudent(id){
   s.classId = document.getElementById('es-class').value;
   ui.editStudent = null; saveData(); renderMain(); showToast('Fiche élève mise à jour');
 }
-function removeStudent(id){ db.students = db.students.filter(s=>s.id!==id); saveData(); renderMain(); }
+function removeStudent(id){ db.students = db.students.filter(s=>s.id!==id); ui.selectedStudents = ui.selectedStudents.filter(x=>x!==id); saveData(); renderMain(); }
+function toggleStudentSelect(id){
+  if(ui.selectedStudents.includes(id)) ui.selectedStudents = ui.selectedStudents.filter(x=>x!==id);
+  else ui.selectedStudents.push(id);
+  renderMain();
+}
+function toggleSelectAllStudents(checked){
+  ui.selectedStudents = checked ? db.students.map(s=>s.id) : [];
+  renderMain();
+}
+function promoteSelectedStudents(){
+  const targetClassId = document.getElementById('promote-class').value;
+  if(!targetClassId) return showToast('Choisissez une classe de destination');
+  db.students.forEach(s=>{ if(ui.selectedStudents.includes(s.id)) s.classId = targetClassId; });
+  const count = ui.selectedStudents.length;
+  ui.selectedStudents = [];
+  saveData(); renderMain();
+  showToast(count+' élève'+(count>1?'s':'')+' déplacé'+(count>1?'s':'')+' vers '+nameOf(db.classes,targetClassId));
+}
 
 function comptesParents(){
   return '<div class="panel"><div class="panel-head"><h3>Nouveau compte parent</h3></div>'+
@@ -1058,7 +1129,7 @@ function profNotes(){
   '<div class="panel" style="overflow-x:auto;"><div class="panel-head"><h3>Saisie des notes</h3></div>'+
   (evals.length===0 ? '<div class="empty">Créez une évaluation pour commencer la saisie.</div>' :
   '<table><thead><tr><th>Élève</th>'+
-    evals.map(e=>'<th>'+e.label+'<br><span style="font-weight:400;text-transform:none;">coef '+e.coef+'</span></th>').join('')+
+    evals.map(e=>'<th>'+e.label+'<br><span style="font-weight:400;text-transform:none;">'+e.date+' · coef '+e.coef+'</span></th>').join('')+
     '<th>Moyenne</th></tr></thead><tbody>'+
   students.map(s=>{
     let sum=0, coefSum=0;
