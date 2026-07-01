@@ -841,25 +841,34 @@ function adminPresences(){
 /* ---------- ADMIN: NOTES (vue d'ensemble) ---------- */
 function adminNotes(){
   if(!ui.notesAdminClass && db.classes.length) ui.notesAdminClass = db.classes[0].id;
+  if(!ui.notesAdminPeriode) ui.notesAdminPeriode = 'Toutes';
   const students = db.students.filter(s=>s.classId===ui.notesAdminClass);
-  return '<div class="page-head"><div><h1>Notes</h1><div class="sub">Moyennes générées automatiquement par les professeurs</div></div></div>'+
+  return '<div class="page-head"><div><h1>Notes</h1><div class="sub">Moyennes générées automatiquement à partir des notes saisies par les professeurs</div></div></div>'+
   '<div class="selector-row"><select onchange="ui.notesAdminClass=this.value; renderMain();">'+
     db.classes.map(c=>'<option value="'+c.id+'" '+(c.id===ui.notesAdminClass?'selected':'')+'>'+c.name+'</option>').join('')+
+  '</select>'+
+  '<select onchange="ui.notesAdminPeriode=this.value; renderMain();">'+
+    '<option value="Toutes" '+(ui.notesAdminPeriode==='Toutes'?'selected':'')+'>Toute l\'année</option>'+
+    PERIODES.map(p=>'<option value="'+p+'" '+(ui.notesAdminPeriode===p?'selected':'')+'>'+p+'</option>').join('')+
   '</select></div>'+
   '<div class="panel" style="overflow-x:auto;"><table><thead><tr><th>Élève</th>'+
-    db.subjects.map(s=>'<th>'+s.name+'</th>').join('')+'</tr></thead><tbody>'+
+    db.subjects.map(s=>'<th>'+s.name+'</th>').join('')+'<th>Moyenne générale</th></tr></thead><tbody>'+
   (students.map(stu=>{
+    let subjectAverages = [];
     const cells = db.subjects.map(sub=>{
-      const evals = db.evals.filter(e=>e.classId===ui.notesAdminClass && e.subjectId===sub.id);
+      let evals = db.evals.filter(e=>e.classId===ui.notesAdminClass && e.subjectId===sub.id);
+      if(ui.notesAdminPeriode!=='Toutes') evals = evals.filter(e=>e.periode===ui.notesAdminPeriode);
       let sum=0, coefSum=0;
       evals.forEach(ev=>{
         const g = db.grades.find(x=>x.evalId===ev.id && x.studentId===stu.id);
         if(g && g.value!==undefined && g.value!==null){ sum += g.value*ev.coef; coefSum += ev.coef; }
       });
-      return '<td class="mono">'+(coefSum?(sum/coefSum).toFixed(2):'—')+'</td>';
+      if(coefSum){ const moy = sum/coefSum; subjectAverages.push(moy); return '<td class="mono">'+moy.toFixed(2)+'</td>'; }
+      return '<td class="mono">—</td>';
     }).join('');
-    return '<tr><td><b>'+stu.name+'</b></td>'+cells+'</tr>';
-  }).join('') || '<tr><td colspan="'+(db.subjects.length+1)+'" class="empty">Aucun élève dans cette classe.</td></tr>')+
+    const general = subjectAverages.length ? (subjectAverages.reduce((a,b)=>a+b,0)/subjectAverages.length).toFixed(2) : '—';
+    return '<tr><td><b>'+stu.name+'</b></td>'+cells+'<td class="mono"><b>'+general+'</b>'+(general!=='—'?'/20':'')+'</td></tr>';
+  }).join('') || '<tr><td colspan="'+(db.subjects.length+2)+'" class="empty">Aucun élève dans cette classe.</td></tr>')+
   '</tbody></table></div>';
 }
 
@@ -1118,6 +1127,7 @@ function setAttendance(studentId, status){
   saveData(); renderMain();
 }
 
+const PERIODES = ['Trimestre 1','Trimestre 2','Trimestre 3'];
 function profNotes(){
   const students = db.students.filter(s=>s.classId===ui.profClass);
   const evals = db.evals.filter(e=>e.classId===ui.profClass && e.subjectId===ui.profSubject);
@@ -1125,11 +1135,13 @@ function profNotes(){
   '<div class="form-grid"><div class="f-group"><label>Intitulé</label><input id="ev-label" placeholder="Ex. Devoir surveillé 1"></div>'+
   '<div class="f-group"><label>Date</label><input id="ev-date" type="date" value="'+todayISO()+'"></div>'+
   '<div class="f-group"><label>Coefficient</label><input id="ev-coef" type="number" min="1" value="1" style="width:80px;"></div>'+
+  '<div class="f-group"><label>Période</label><select id="ev-periode">'+PERIODES.map(p=>'<option value="'+p+'">'+p+'</option>').join('')+'</select></div>'+
   '<button class="btn-sm" onclick="addEval()">Créer</button></div></div>'+
   '<div class="panel" style="overflow-x:auto;"><div class="panel-head"><h3>Saisie des notes</h3></div>'+
   (evals.length===0 ? '<div class="empty">Créez une évaluation pour commencer la saisie.</div>' :
   '<table><thead><tr><th>Élève</th>'+
-    evals.map(e=>'<th>'+e.label+'<br><span style="font-weight:400;text-transform:none;">'+e.date+' · coef '+e.coef+'</span></th>').join('')+
+    evals.map(e=>'<th>'+e.label+'<br><span style="font-weight:400;text-transform:none;">'+e.date+' · coef '+e.coef+(e.periode?' · '+e.periode:'')+'</span>'+
+      '<button class="del-btn" style="display:block;margin-top:3px;" onclick="removeEval(\''+e.id+'\')">Supprimer</button></th>').join('')+
     '<th>Moyenne</th></tr></thead><tbody>'+
   students.map(s=>{
     let sum=0, coefSum=0;
@@ -1150,9 +1162,16 @@ function addEval(){
   const label = document.getElementById('ev-label').value.trim();
   const date = document.getElementById('ev-date').value || todayISO();
   const coef = Number(document.getElementById('ev-coef').value) || 1;
+  const periode = document.getElementById('ev-periode').value;
   if(!label) return showToast('Indiquez un intitulé');
-  db.evals.push({id:uid('ev'), classId:ui.profClass, subjectId:ui.profSubject, label, date, coef});
+  db.evals.push({id:uid('ev'), classId:ui.profClass, subjectId:ui.profSubject, label, date, coef, periode});
   saveData(); renderMain(); showToast('Évaluation créée — saisissez les notes, chaque étudiant la verra sur son compte');
+}
+function removeEval(evalId){
+  if(!confirm('Supprimer cette évaluation ? Toutes les notes saisies pour elle seront aussi supprimées.')) return;
+  db.evals = db.evals.filter(e=>e.id!==evalId);
+  db.grades = db.grades.filter(g=>g.evalId!==evalId);
+  saveData(); renderMain(); showToast('Évaluation supprimée');
 }
 function setGrade(evalId, studentId, value){
   value = value==='' ? undefined : Math.max(0, Math.min(20, Number(value)));
